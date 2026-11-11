@@ -108,3 +108,14 @@ export function resolveRefreshScopes(requested: string[] | null, granted: string
   if (offending) return { ok: false, unknown: offending };
   return { ok: true, scopes: unique };
 }
+
+/**
+ * Incremental consent: after an earlier grant, the consent screen lists only the
+ * new scopes — unless the app forces the full list with prompt=consent.
+ */
+export function consentDelta(requested: string[], granted: string[], prompt: string | null) {
+  const force = (prompt ?? "").split(" ").includes("consent");
+  const fresh = requested.filter((s) => s !== "openid" && !granted.includes(s));
+  const incremental = !force && granted.some((s) => s !== "openid") && fresh.length > 0;
+  return { incremental, shown: incremental ? fresh : requested, previouslyGranted: granted.filter((s) => s !== "openid" && requested.includes(s)) };
+}

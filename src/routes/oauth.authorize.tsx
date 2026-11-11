@@ -367,13 +367,8 @@ function AuthorizePage() {
   const handle = prompt.account?.handle;
   const needsCode = Boolean(prompt.requiresStepUp) && !stepUpDone;
   const scopes = prompt.scopes ?? [];
-  // Incremental consent ("Verifieer met ROUT"): after an earlier grant, show only
-  // what is new — unless the app explicitly asked prompt=consent.
-  const granted = prompt.grantedScopes ?? [];
-  const forceConsent = (search.prompt ?? "").split(" ").includes("consent");
-  const newScopes = scopes.filter((s) => s !== "openid" && !granted.includes(s));
-  const incremental = !forceConsent && granted.some((s) => s !== "openid") && newScopes.length > 0;
-  const shownScopes = incremental ? newScopes : scopes;
+  // Incremental consent ("Verifiëren met ROUT"): only new items after an earlier grant.
+  const { incremental, shown: shownScopes, previouslyGranted } = consentDelta(scopes, prompt.grantedScopes ?? [], search.prompt ?? null);
 
   return (
     <main className="dark flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
@@ -507,7 +502,7 @@ function AuthorizePage() {
         </ul>
         {incremental && (
           <p className="mt-3 text-xs text-muted-foreground">
-            {t("auth.consent.previously", { app: appName, count: String(granted.filter((s) => s !== "openid").length) })}
+            {t("auth.consent.previously", { app: appName, count: String(previouslyGranted.length) })}
           </p>
         )}
 
