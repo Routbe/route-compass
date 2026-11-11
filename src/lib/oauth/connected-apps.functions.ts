@@ -64,7 +64,7 @@ export const listAppEmails = createServerFn({ method: "GET" })
     const { emailOptionsOf, appEmailFor } = await import("./email-broker.server");
     const { staleAssignments } = await import("./backchannel");
     const consents = (await sql`select client_id from public.oauth_consents
-      where user_id = ${context.userId} and revoked_at is null limit 200`) as Record<string, unknown>[];
+      where user_id = ${context.userId} and revoked_at is null and 'email' = any(scopes) limit 200`) as Record<string, unknown>[];
     const rows = (await sql`select client_id, source, assigned_email from public.app_email_assignments
       where user_id = ${context.userId}`) as Record<string, unknown>[];
     const u = ((await sql`select email from public.users where id = ${context.userId} limit 1`) as Record<string, unknown>[])[0];
@@ -97,8 +97,8 @@ export const setAppEmail = createServerFn({ method: "POST" })
     const { requirePasskeyStepUp } = await import("@/lib/auth/step-up-guard.server");
     await requirePasskeyStepUp(context.userId, "app_email_reassign");
     const { sql } = await import("@/lib/neon");
-    const consent = await sql`select 1 from public.oauth_consents where user_id = ${context.userId} and client_id = ${data.clientId} and revoked_at is null limit 1`;
-    if (!consent.length) throw new Error("Deze app is niet met je account verbonden.");
+    const consent = await sql`select 1 from public.oauth_consents where user_id = ${context.userId} and client_id = ${data.clientId} and revoked_at is null and 'email' = any(scopes) limit 1`;
+    if (!consent.length) throw new Error("Deze app is niet verbonden of mag je e-mailadres niet zien.");
     const before = ((await sql`select assigned_email from public.app_email_assignments where user_id = ${context.userId} and client_id = ${data.clientId}`) as Record<string, unknown>[])[0];
     const { assignAppEmail } = await import("./email-broker.server");
     await assignAppEmail(context.userId, data.clientId, data.choiceId);
@@ -126,7 +126,7 @@ export const bulkUpdateAppEmails = createServerFn({ method: "POST" })
     const primary = (u?.["email"] as string | null) ?? null;
     if (!primary) throw new Error("Je account heeft geen primair e-mailadres.");
     const consented = ((await sql`select client_id from public.oauth_consents where user_id = ${context.userId}
-      and revoked_at is null and client_id = any(${data.clientIds})`) as Record<string, unknown>[]).map((r) => String(r["client_id"]));
+      and revoked_at is null and 'email' = any(scopes) and client_id = any(${data.clientIds})`) as Record<string, unknown>[]).map((r) => String(r["client_id"]));
     const rows = (await sql`select client_id, source, assigned_email from public.app_email_assignments
       where user_id = ${context.userId} and client_id = any(${consented})`) as Record<string, unknown>[];
     const known = rows.map((r) => ({ clientId: String(r["client_id"]), source: String(r["source"]), assignedEmail: String(r["assigned_email"]) }));

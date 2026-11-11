@@ -338,6 +338,8 @@ export type AuthorizePrompt = {
   /** Sign-in providers linked to this ROUT account (Google, Apple, …) — names only. */
   linkedProviders?: string[];
   alreadyGranted?: boolean;
+  /** Scopes already granted earlier (incremental consent shows only the rest). */
+  grantedScopes?: string[];
   /** Strict flow / prompt=login / max_age / acr_values → extra code required. */
   requiresStepUp?: boolean;
   trustedKycPartner?: boolean;
@@ -468,6 +470,11 @@ export const describeAuthorizeRequest = createServerFn({ method: "POST" })
         }
       })()),
       alreadyGranted: await hasConsent(context.userId, client.clientId, scopes),
+      grantedScopes: await (async () => {
+        const { grantedScopesOf } = await import("./provider.server");
+        return (await grantedScopesOf(context.userId, client.clientId).catch(() => [] as string[]))
+          .filter((s) => scopes.includes(s));
+      })(),
       requiresStepUp: stepUp || scopes.includes("identity:national_id"),
       richIdentity: client.richIdentityEnabled,
       trustedKycPartner: await (async () => {

@@ -104,6 +104,14 @@ export function featureInstructions(app: TemplateApp): Record<string, string[]> 
   if (app.scopes.includes("sybil:verify")) {
     out["sybil:verify"] = ["- `sybil:verify` (userinfo): `is_unique_human` boolean and `app_sybil_nullifier` (stable per person for YOUR app only). Use the nullifier as a UNIQUE column to allow one account per real person. The member can decline this scope; handle `false`/absent."];
   }
+  if (app.scopes.includes("sybil:verify") || app.scopes.includes("identity:legal_name")) {
+    out["verify-step"] = [
+      "- Graduated consent: keep the first sign-in minimal (`openid profile email`). Ask for `sybil:verify` / `identity:legal_name` only when the user clicks the \"Verifiëren met ROUT\" button (markup below) on an already signed-in account.",
+      "- That button starts a NEW authorization request (fresh state, nonce and PKCE) whose `scope` is the full set you need now (base scopes + the extra ones). ROUT shows the member only the new items and keeps the earlier permission. Do not send `prompt=consent` unless you deliberately want the full list again.",
+      "- After the callback, verify that the returned `sub` equals the signed-in user's stored `sub` before saving any verification result; otherwise reject it.",
+      routButtonSnippet("verify"),
+    ];
+  }
   if (app.scopes.includes("identity:legal_name")) {
     out["identity:legal_name"] = ["- `identity:legal_name` (userinfo): `first_name`, `last_name`, `full_legal_name` of a verified member; null when not verified or declined. Display them read-only; never let users edit a verified legal name."];
   }
@@ -369,6 +377,9 @@ export function buildChangePrompt(prev: PromptSnapshot, nextApp: TemplateApp, to
     todo.push(`- Add \`${s}\` to the requested scopes.${SCOPE_CLAIMS[s]?.length ? ` New claims: ${SCOPE_CLAIMS[s]!.join(", ")}.` : ""}`);
     if (features[s]) todo.push(...features[s]!);
   }
+  const verifyScopes = ["sybil:verify", "identity:legal_name"];
+  const hadVerify = prev.scopes.some((s) => verifyScopes.includes(s));
+  if (!hadVerify && added.some((s) => verifyScopes.includes(s)) && features["verify-step"]) todo.push(...features["verify-step"]!);
   for (const s of removed) {
     changes.push(`- Scope removed: \`${s}\``);
     todo.push(`- Stop requesting \`${s}\`.${SCOPE_CLAIMS[s]?.length ? ` Treat ${SCOPE_CLAIMS[s]!.join(", ")} as absent; never fail login on it, and stop showing or overwriting that data.` : ""}`);

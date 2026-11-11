@@ -549,7 +549,21 @@ export async function issueAuthorizationCode(input: {
 export async function rememberConsent(userId: string, clientId: string, scopes: string[]) {
   await sql`insert into public.oauth_consents (user_id, client_id, scopes)
     values (${userId}, ${clientId}, ${scopes})
-    on conflict (user_id, client_id) do update set scopes = excluded.scopes, granted_at = now(), revoked_at = null`;
+    on conflict (user_id, client_id) do update set
+      scopes = case when public.oauth_consents.revoked_at is null
+        then array(select distinct x from unnest(public.oauth_consents.scopes || excluded.scopes) as x order by x)
+        else excluded.scopes end,
+      granted_at = now(), revoked_at = null`;
+}
+
+/**
+ * Scopes this member already granted to the app (active consent only). Used for
+ * incremental consent: a later "Verifieer met ROUT" request shows only what is new.
+ */
+export async function grantedScopesOf(userId: string, clientId: string): Promise<string[]> {
+  const rows = (await sql`select scopes from public.oauth_consents
+    where user_id = ${userId} and client_id = ${clientId} and revoked_at is null limit 1`) as Row[];
+  return (rows[0]?.["scopes"] as string[] | null) ?? [];
 }
 
 async function consumeCode(code: string) {

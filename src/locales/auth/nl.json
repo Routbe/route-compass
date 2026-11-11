@@ -105,7 +105,7 @@
   "auth.scope.openid": "Je identiteit bevestigen met een uniek ROUT-ID.",
   "auth.scope.profile": "Je openbare naam, gebruikersnaam en profielfoto.",
   "auth.scope.email": "Je e-mailadres en de verificatiestatus ervan.",
-  "auth.scope.linked_accounts": "De accounts die je aan ROUT hebt gekoppeld, om dubbele accounts te voorkomen.",
+  "auth.scope.linked_accounts": "Oud recht zonder gegevens: ROUT deelt nooit welke andere accounts je gekoppeld hebt.",
   "auth.consent.summary": "Deze app vraagt toegang tot de volgende gegevens.",
   "auth.consent.identityOnly": "Deze app vraagt alleen om je identiteit te bevestigen.",
   "auth.consent.mismatch": "De redirect-URL {{received}} komt niet overeen met de geregistreerde URL’s: {{expected}}.",
@@ -317,5 +317,7 @@
   "auth.consent.bhm.title": "We vonden je oude account bij {{app}}",
   "auth.consent.bhm.body": "Je browser vergeleek dit zelf; {{app}} ziet je andere accounts niet. Kies waarmee je verder wilt gaan.",
   "auth.consent.bhm.provider": "Je {{provider}}-account",
-  "auth.consent.bhm.none": "Niet samenvoegen, start als nieuw account"
+  "auth.consent.bhm.none": "Niet samenvoegen, start als nieuw account",
+  "auth.consent.incremental": "{{app}} vraagt nu extra toegang. Je eerdere toestemming blijft zoals ze is.",
+  "auth.consent.previously": "Eerder al gedeeld met {{app}}: {{count}} onderdelen. Intrekken kan bij Verbonden apps."
 }

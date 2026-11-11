@@ -5,11 +5,22 @@ export const ROUT_BUTTON_LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox
 /** These are routes the integrator implements, never ROUT authorization URLs. */
 export type RoutButtonTheme = "light" | "dark";
 
-export function routButtonSnippet(mode: "login" | "connect", theme: RoutButtonTheme = "dark") {
-  const label = mode === "login" ? "Doorgaan met ROUT" : "Verbinden met ROUT";
+export type RoutButtonMode = "login" | "connect" | "verify";
+
+export const ROUT_BUTTON_LABELS: Record<RoutButtonMode, string> = {
+  login: "Doorgaan met ROUT",
+  connect: "Verbinden met ROUT",
+  verify: "Verifiëren met ROUT",
+};
+
+export function routButtonSnippet(mode: RoutButtonMode, theme: RoutButtonTheme = "dark") {
+  const label = ROUT_BUTTON_LABELS[mode];
   return `<!-- Implement this POST handler in YOUR app before enabling this button.
 It creates state, nonce and PKCE, then redirects using OIDC discovery.
 Connect requires an existing local session and never replaces that session.
+Verify also requires an existing local session: it starts a NEW authorization request
+with the extra scopes (e.g. "openid sybil:verify identity:legal_name"); ROUT then asks
+the member only for what is new and keeps earlier permissions.
 Include your framework's CSRF field/protection in this form. -->
 <form method="post" action="/auth/rout/${mode}">
   <button class="rout-button rout-button--${theme}" type="submit">

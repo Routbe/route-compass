@@ -123,3 +123,22 @@ describe("sybil nullifier isolation", () => {
     expect(body["app_sybil_nullifier"]).toBeUndefined();
   });
 });
+
+import { consentDelta } from "./scope-rules";
+
+describe("consentDelta (Verifiëren met ROUT)", () => {
+  it("shows only new scopes after an earlier grant", () => {
+    const r = consentDelta(["openid", "profile", "sybil:verify"], ["openid", "profile"], null);
+    expect(r.incremental).toBe(true);
+    expect(r.shown).toEqual(["sybil:verify"]);
+    expect(r.previouslyGranted).toEqual(["profile"]);
+  });
+  it("shows everything on a first grant", () => {
+    const r = consentDelta(["openid", "email"], [], null);
+    expect(r.incremental).toBe(false);
+    expect(r.shown).toEqual(["openid", "email"]);
+  });
+  it("prompt=consent forces the full list", () => {
+    expect(consentDelta(["openid", "profile", "sybil:verify"], ["openid", "profile"], "consent").shown).toEqual(["openid", "profile", "sybil:verify"]);
+  });
+});

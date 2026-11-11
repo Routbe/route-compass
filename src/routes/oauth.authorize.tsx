@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { RoutLogo } from "@/components/RoutLogo";
 import { BadgeCheck, Bot, Check, Eye, Fingerprint, IdCard, KeyRound, Loader2, Lock, Mail, PenLine, QrCode, ShieldCheck, User } from "lucide-react";
-import { OPTIONAL_SCOPES } from "@/lib/oauth/scope-rules";
+import { OPTIONAL_SCOPES, consentDelta } from "@/lib/oauth/scope-rules";
 import { BHM_PARAM, BHM_SCOPE, parseBlindHashes, type BhmIdentity } from "@/lib/oauth/blind-hash";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -367,6 +367,8 @@ function AuthorizePage() {
   const handle = prompt.account?.handle;
   const needsCode = Boolean(prompt.requiresStepUp) && !stepUpDone;
   const scopes = prompt.scopes ?? [];
+  // Incremental consent ("Verifiëren met ROUT"): only new items after an earlier grant.
+  const { incremental, shown: shownScopes, previouslyGranted } = consentDelta(scopes, prompt.grantedScopes ?? [], search.prompt ?? null);
 
   return (
     <main className="dark flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
@@ -470,9 +472,9 @@ function AuthorizePage() {
         )}
 
         {/* Transparantie */}
-        <p className="mt-6 text-sm">{t(scopes.some((scope) => scope !== "openid") ? "auth.consent.summary" : "auth.consent.identityOnly")}</p>
+        <p className="mt-6 text-sm">{incremental ? t("auth.consent.incremental", { app: appName }) : t(scopes.some((scope) => scope !== "openid") ? "auth.consent.summary" : "auth.consent.identityOnly")}</p>
         <ul className="mt-3 space-y-2">
-          {scopes.map((scope) => {
+          {shownScopes.map((scope) => {
             const item = SCOPE_TEXT[scope];
             const Icon = item?.icon ?? ShieldCheck;
             return (
@@ -498,6 +500,11 @@ function AuthorizePage() {
             );
           })}
         </ul>
+        {incremental && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t("auth.consent.previously", { app: appName, count: String(previouslyGranted.length) })}
+          </p>
+        )}
 
         {prompt.trustedKycPartner && (
           <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">

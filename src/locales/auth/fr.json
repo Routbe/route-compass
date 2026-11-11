@@ -105,7 +105,7 @@
   "auth.scope.openid": "Confirmer votre identité avec un identifiant ROUT unique.",
   "auth.scope.profile": "Votre nom public, identifiant et photo de profil.",
   "auth.scope.email": "Votre adresse e-mail et son statut de vérification.",
-  "auth.scope.linked_accounts": "Les comptes associés à ROUT, pour éviter les doublons.",
+  "auth.scope.linked_accounts": "Ancienne autorisation sans données : ROUT ne partage jamais les autres comptes que tu as liés.",
   "auth.consent.summary": "Cette application demande l’accès aux informations suivantes.",
   "auth.consent.identityOnly": "Cette application demande uniquement de confirmer votre identité.",
   "auth.consent.mismatch": "L’URL de redirection {{received}} ne correspond pas aux URL enregistrées : {{expected}}.",
@@ -317,5 +317,7 @@
   "auth.consent.bhm.title": "Nous avons trouvé votre ancien compte chez {{app}}",
   "auth.consent.bhm.body": "Votre navigateur a fait la comparaison lui-même ; {{app}} ne voit pas vos autres comptes. Choisissez comment continuer.",
   "auth.consent.bhm.provider": "Votre compte {{provider}}",
-  "auth.consent.bhm.none": "Ne pas fusionner, créer un nouveau compte"
+  "auth.consent.bhm.none": "Ne pas fusionner, créer un nouveau compte",
+  "auth.consent.incremental": "{{app}} demande maintenant un accès supplémentaire. Ton autorisation précédente reste inchangée.",
+  "auth.consent.previously": "Déjà partagé avec {{app}} : {{count}} éléments. Tu peux les révoquer dans Applications connectées."
 }
