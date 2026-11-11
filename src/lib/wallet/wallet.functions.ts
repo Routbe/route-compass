@@ -14,6 +14,7 @@ export const createWalletPass = createServerFn({ method: "POST" })
     const { canClaimWalletCard } = await import("./wallet-claim");
     if (!own || !canClaimWalletCard(own, data.handle, data.space)) return { ok: false as const, error: "forbidden" };
     // Wallet cards are for verified members only: a verified root profile is the gate for every card.
+    const { isVerifiedMember } = await import("./wallet-verified.server");
     if (own.space === "alias" && !(await isVerifiedMember(context.userId))) return { ok: false as const, error: "not_verified" };
     const { googleWalletConfig } = await import("./wallet-pass");
     const cfg = googleWalletConfig(process.env as Record<string, string | undefined>);
@@ -75,6 +76,7 @@ export const createVaultPass = createServerFn({ method: "POST" })
     if (!cfg) return { ok: false as const, error: "wallet_not_configured" };
     const { walletOrigin, generateWalletPayload } = await import("./wallet-payload.server");
     const { signGoogleSaveJwt, googleSaveLink } = await import("./google-wallet.server");
+    const { isVerifiedMember } = await import("./wallet-verified.server");
     if (!(await isVerifiedMember(context.userId))) return { ok: false as const, error: "not_verified" };
     try {
       if (data.passType === "SMART_TAP_KEY") {
@@ -99,13 +101,6 @@ export const createVaultPass = createServerFn({ method: "POST" })
       return { ok: false as const, error: "wallet_issue_failed" };
     }
   });
-
-/** True when the member has a verified root profile (the wallet payload resolves only for verified profiles). */
-export async function isVerifiedMember(userId: string): Promise<boolean> {
-  const { generateWalletPayload } = await import("./wallet-payload.server");
-  const root = await generateWalletPayload(userId, { space: "root", allowAccountId: true }).catch(() => null);
-  return root?.space === "root";
-}
 
 const frontTarget = z.object({ target: z.enum(["root", "alias"]) });
 
