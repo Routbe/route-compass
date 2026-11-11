@@ -377,6 +377,9 @@ export function buildChangePrompt(prev: PromptSnapshot, nextApp: TemplateApp, to
     todo.push(`- Add \`${s}\` to the requested scopes.${SCOPE_CLAIMS[s]?.length ? ` New claims: ${SCOPE_CLAIMS[s]!.join(", ")}.` : ""}`);
     if (features[s]) todo.push(...features[s]!);
   }
+  const verifyScopes = ["sybil:verify", "identity:legal_name"];
+  const hadVerify = prev.scopes.some((s) => verifyScopes.includes(s));
+  if (!hadVerify && added.some((s) => verifyScopes.includes(s)) && features["verify-step"]) todo.push(...features["verify-step"]!);
   for (const s of removed) {
     changes.push(`- Scope removed: \`${s}\``);
     todo.push(`- Stop requesting \`${s}\`.${SCOPE_CLAIMS[s]?.length ? ` Treat ${SCOPE_CLAIMS[s]!.join(", ")} as absent; never fail login on it, and stop showing or overwriting that data.` : ""}`);
