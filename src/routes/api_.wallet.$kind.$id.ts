@@ -26,6 +26,8 @@ export const Route = createFileRoute("/api_/wallet/$kind/$id")({
           const own = await withDbContext({ userId: user.id, workspaceId: null }, () => generateWalletPayload(user.id, { space, allowAccountId: true }));
           const { canClaimWalletCard } = await import("@/lib/wallet/wallet-claim");
           if (!canClaimWalletCard(own, params.id, space)) return Response.json({ error: "forbidden" }, { status: 403, headers });
+          const { isVerifiedMember } = await import("@/lib/wallet/wallet.functions");
+          if (!(await isVerifiedMember(user.id))) return Response.json({ error: "not_verified" }, { status: 403, headers });
         }
         const { isPlatformFeatureEnabled } = await import("@/lib/platform-features.server");
         if (!(await isPlatformFeatureEnabled("wallet"))) return Response.json({ error: "feature_disabled" }, { status: 403, headers: { "cache-control": "no-store" } });

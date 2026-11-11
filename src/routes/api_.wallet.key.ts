@@ -13,6 +13,8 @@ export const Route = createFileRoute("/api_/wallet/key")({
         const { currentUser } = await import("@/lib/auth/session.server");
         const user = await currentUser();
         if (!user) return Response.json({ error: "unauthorized" }, { status: 401, headers });
+        const { isVerifiedMember } = await import("@/lib/wallet/wallet.functions");
+        if (!(await isVerifiedMember(user.id))) return Response.json({ error: "not_verified" }, { status: 403, headers });
         const { isPlatformFeatureEnabled } = await import("@/lib/platform-features.server");
         if (!(await isPlatformFeatureEnabled("wallet"))) return Response.json({ error: "feature_disabled" }, { status: 403, headers });
         const { guardShared } = await import("@/lib/rate-limit-db.server");

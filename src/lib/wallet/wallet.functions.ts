@@ -13,6 +13,8 @@ export const createWalletPass = createServerFn({ method: "POST" })
     const own = await generateWalletPayload(context.userId, { space: data.space, allowAccountId: true });
     const { canClaimWalletCard } = await import("./wallet-claim");
     if (!own || !canClaimWalletCard(own, data.handle, data.space)) return { ok: false as const, error: "forbidden" };
+    // Wallet cards are for verified members only: a verified root profile is the gate for every card.
+    if (own.space === "alias" && !(await isVerifiedMember(context.userId))) return { ok: false as const, error: "not_verified" };
     const { googleWalletConfig } = await import("./wallet-pass");
     const cfg = googleWalletConfig(process.env as Record<string, string | undefined>);
     if (!cfg) return { ok: false as const, error: "wallet_not_configured" };
@@ -47,13 +49,16 @@ export const getMyWalletVault = createServerFn({ method: "GET" })
     ]);
     const status = on ? walletStatus(env) : { apple: false, google: false };
     const secret = (env["WALLET_ID_SECRET"]?.length ?? 0) >= 32;
+    // The root payload only resolves for a verified profile; without it no card is issued.
+    const verified = root?.space === "root";
     return {
-      root: root?.space === "root" ? root.handle : null,
-      alias: alias?.space === "alias" ? alias.handle : null,
+      verified,
+      root: verified ? root.handle : null,
+      alias: verified && alias?.space === "alias" ? alias.handle : null,
       google: status.google,
       apple: status.apple,
-      keyGoogle: status.google && secret && !!smartTapConfig(env),
-      keyApple: status.apple && secret && !!appleNfcConfig(env),
+      keyGoogle: verified && status.google && secret && !!smartTapConfig(env),
+      keyApple: verified && status.apple && secret && !!appleNfcConfig(env),
     };
   });
 
@@ -70,6 +75,7 @@ export const createVaultPass = createServerFn({ method: "POST" })
     if (!cfg) return { ok: false as const, error: "wallet_not_configured" };
     const { walletOrigin, generateWalletPayload } = await import("./wallet-payload.server");
     const { signGoogleSaveJwt, googleSaveLink } = await import("./google-wallet.server");
+    if (!(await isVerifiedMember(context.userId))) return { ok: false as const, error: "not_verified" };
     try {
       if (data.passType === "SMART_TAP_KEY") {
         const { smartTapConfig, googleKeySaveClaims } = await import("./wallet-key");
@@ -92,6 +98,39 @@ export const createVaultPass = createServerFn({ method: "POST" })
       console.error("[wallet] vault pass signing failed");
       return { ok: false as const, error: "wallet_issue_failed" };
     }
+  });
+
+/** True when the member has a verified root profile (the wallet payload resolves only for verified profiles). */
+export async function isVerifiedMember(userId: string): Promise<boolean> {
+  const { generateWalletPayload } = await import("./wallet-payload.server");
+  const root = await generateWalletPayload(userId, { space: "root", allowAccountId: true }).catch(() => null);
+  return root?.space === "root";
+}
+
+const frontTarget = z.object({ target: z.enum(["root", "alias"]) });
+
+/** Owner only: where the big front QR of the ROUT card points (public profile or alias profile). */
+export const getMyCardFront = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    const { sql } = await import("@/lib/neon");
+    const { generateWalletPayload } = await import("./wallet-payload.server");
+    const [rows, alias] = await Promise.all([
+      sql`select display_prefs->>'cardFrontTarget' as target from public.profiles where id = ${context.userId} limit 1`,
+      generateWalletPayload(context.userId, { space: "alias", allowAccountId: true }).catch(() => null),
+    ]);
+    const aliasHandle = alias?.space === "alias" ? alias.handle : null;
+    const stored = rows[0]?.target === "alias" ? "alias" : "root";
+    return { target: (stored === "alias" && aliasHandle ? "alias" : "root") as "root" | "alias", alias: aliasHandle };
+  });
+
+export const setMyCardFront = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((d: unknown) => frontTarget.parse(d))
+  .handler(async ({ data, context }) => {
+    const { sql } = await import("@/lib/neon");
+    await sql`update public.profiles set display_prefs = jsonb_set(coalesce(display_prefs, '{}'::jsonb), '{cardFrontTarget}', to_jsonb(${data.target}::text), true) where id = ${context.userId}`;
+    return { ok: true as const };
   });
 
 /** Public: which wallets can issue passes right now (booleans only, never config values). */
