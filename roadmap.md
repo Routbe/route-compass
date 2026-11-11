@@ -120,3 +120,13 @@
 - [ ] Partner sign-in with device-made partner IDs (member opt-in, no server fallback, sealed in tokens).
 - [ ] Partner IDs and contact key from the Master Key (same on every device, restorable via the vault) instead of one passkey.
 - [ ] Tests + signed-in check on phone and computer size.
+
+## Developer console (plan 2026-11-11)
+- [x] Apps aanmaken: extra bevestiging + één domein voor redirects; app blijft zichtbaar als instellingen falen
+- [x] Workspace-apps zichtbaar voor alle leden van de workspace
+- [x] /u/<workspace> stuurt door naar /w/<workspace>
+- [ ] Teamleden kunnen apps van een collega ook bewerken (nu alleen bekijken)
+- [ ] Stapsgewijze toestemming (Verifieer met ROUT)
+- [ ] Accounts herkennen / samenvoegen / meerdere kiezen + infolijntje
+- [ ] Connect with ROUT: e-mail overal tegelijk wijzigen
+- [ ] ROUT-gebruikersnamen voor apps
