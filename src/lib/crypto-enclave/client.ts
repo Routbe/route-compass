@@ -194,6 +194,10 @@ export const enclave = {
   hash: {
     sha256Hex: (text: string) => callEnclave("hash.sha256Hex", { text }),
   },
+  bhm: {
+    match: (clientId: string, hashes: string[], identities: { kind: string; value: string }[]) =>
+      callEnclave("bhm.match", { clientId, hashes, identities }),
+  },
   protocol: {
     verifyChain: (events: SignedEvent[]) => callEnclave("protocol.verifyChain", { events }),
     identity: (userId: string) => callEnclave("protocol.identity", { userId }),
