@@ -196,16 +196,6 @@ create table user_identities (
 );
 -- Merge rule: only link when the id_token says email_verified = true.`;
   }
-  if (app.handleSyncEnabled) {
-    out += `
-
--- Universal Handle Sync: processed webhook events (idempotency)
-create table rout_webhook_events (
-  id          text primary key,          -- event id from ROUT
-  type        text not null,             -- 'user.handle.updated'
-  received_at timestamptz not null default now()
-);`;
-  }
   return out;
 }
 
@@ -235,17 +225,6 @@ model UserIdentity {
 
   @@unique([provider, providerId])
   @@unique([userId, provider])
-}`;
-  }
-  if (app.handleSyncEnabled) {
-    out += `
-
-model RoutWebhookEvent {
-  id         String   @id
-  type       String
-  receivedAt DateTime @default(now()) @map("received_at")
-
-  @@map("rout_webhook_events")
 }`;
   }
   return out;
