@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, redirect, useParams } from "@tanstack/react-router";
-import { resolveMigratedHandle } from "@/lib/workspace-public.functions";
+import { getPublicWorkspace, resolveMigratedHandle } from "@/lib/workspace-public.functions";
 import { Loader2 } from "lucide-react";
 import { ProfileLookupError, ProfileMissing, ProfileView } from "@/components/profile/ProfileView";
 import { InviteBanner } from "@/components/profile/InviteBanner";
@@ -103,6 +103,11 @@ export const Route = createFileRoute("/u/$username")({
       const style = isUrlStyle(rawStyle) ? rawStyle : DEFAULT_URL_STYLE;
       const target = aliasRedirectFor(params.username, style);
       if (target) throw redirect({ href: target, statusCode: 301 });
+    }
+    if (!row) {
+      // /u/ is for people only: a workspace address typed with /u/ goes to /w/.
+      const ws = await getPublicWorkspace({ data: { slug: handle } }).catch(() => null);
+      if (ws) throw redirect({ to: "/w/$slug", params: { slug: ws.slug }, statusCode: 301 });
     }
     return { handle, locale, profile: row };
   },
