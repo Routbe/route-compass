@@ -1,5 +1,11 @@
 # Repository import
 
+## Current request (11 Nov 2026): sign-in check, sign-in layout, ROUT card vs profile cards
+
+- [ ] Sign-in and sign-up for new users: blocked on BETTER_AUTH_SECRET / BETTER_AUTH_URL (user must add).
+- [x] Sign-in layout: split (form | divider | labelled providers) from tablet width, icon row on top on phones.
+- [ ] ROUT card: front QR links to a chosen profile card, back QR = secure payment/access code; ROUT card wallet pass = secure payment pass (QR + NFC), profile cards = profile QR passes; only for verified members.
+
 ## Current request (7 Nov 2026): 1:1 import into this project, full read-through, then Neon
 
 - [x] Byte-compare the GitHub repository with this project; restore unintended differences.

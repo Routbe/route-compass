@@ -28,7 +28,7 @@ export function PublicProviderSignIn({ configured, readiness, disabled }: { conf
   }
   return <div className="space-y-2">
     {/* Mobile: compact icon row. Desktop: full labelled buttons. */}
-    <div className="flex flex-wrap justify-center gap-2 lg:hidden" role="group" aria-label={t("auth.provider.continue", { name: "" })}>
+    <div className="flex flex-wrap justify-center gap-2 md:hidden" role="group" aria-label={t("auth.provider.continue", { name: "" })}>
       {AUTH_PROVIDERS.map(provider => {
         const available = providerAvailable(provider.id, configured, readiness);
         return <Button key={provider.id} type="button" variant="outline" size="icon" aria-label={t("auth.provider.continue", { name: provider.label })}
@@ -39,7 +39,7 @@ export function PublicProviderSignIn({ configured, readiness, disabled }: { conf
         </Button>;
       })}
     </div>
-    <div className="hidden space-y-2 lg:block">
+    <div className="hidden space-y-2 md:block">
     {AUTH_PROVIDERS.map(provider => {
       const available = providerAvailable(provider.id, configured, readiness);
       return <Button key={provider.id} type="button" variant="outline" className={`min-h-11 w-full justify-start gap-2.5 px-3 text-sm ${provider.id === "google" ? "google-sign-in" : ""}`} disabled={disabled || busy !== null || !available}

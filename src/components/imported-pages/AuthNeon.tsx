@@ -428,14 +428,14 @@ export default function AuthNeon({ initialMode = "signin" }: { initialMode?: Mod
     <AppLayout>
       <div className="flex min-h-[calc(100vh-4rem)] w-full flex-col items-center justify-center bg-background p-4 text-foreground">
         {!adminPortal && (
-          <div className="w-full max-w-md lg:max-w-4xl">
+          <div className="w-full max-w-md md:max-w-4xl">
             <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" /> {t("auth.ui.back")}
             </Link>
           </div>
         )}
 
-        <div className={`w-full rounded-2xl border border-border bg-card p-5 sm:p-7 ${!adminPortal && (mode === "signin" || mode === "signup") && step !== "second" ? "max-w-md lg:max-w-4xl" : "max-w-md"}`}>
+        <div className={`w-full rounded-2xl border border-border bg-card p-5 sm:p-7 ${!adminPortal && (mode === "signin" || mode === "signup") && step !== "second" ? "max-w-md md:max-w-4xl" : "max-w-md"}`}>
           <div className="mb-4">
             <h1 className="mb-1 font-display text-2xl text-foreground">
               {adminPortal ? t("auth.admin") : mode === "signup" ? t("auth.ui.signup.cta") : mode === "recovery" ? t("auth.pk.recoveryTitle") : mode === "reset" ? t("auth.mf.resetTitle") : t("auth.ui.title")}
@@ -470,14 +470,14 @@ export default function AuthNeon({ initialMode = "signin" }: { initialMode?: Mod
           {mode === "signin" && step !== "second" && (
             <div className="space-y-3">
               {(step === "choose" || step === "password") && (
-                <div className={adminPortal ? "space-y-3" : "flex flex-col gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-8"}>
+                <div className={adminPortal ? "space-y-3" : "flex flex-col gap-4 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-8"}>
                   {!adminPortal && <>
-                    <div className="lg:order-3"><PublicProviderSignIn configured={configuredProviders} readiness={readiness} disabled={loading} /></div>
-                    <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground lg:order-2 lg:flex-col lg:py-2" aria-hidden>
-                      <span className="h-px flex-1 bg-border lg:h-auto lg:w-px" /> of <span className="h-px flex-1 bg-border lg:h-auto lg:w-px" />
+                    <div className="md:order-3"><PublicProviderSignIn configured={configuredProviders} readiness={readiness} disabled={loading} /></div>
+                    <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground md:order-2 md:flex-col md:py-2" aria-hidden>
+                      <span className="h-px flex-1 bg-border md:h-auto md:w-px" /> of <span className="h-px flex-1 bg-border md:h-auto md:w-px" />
                     </div>
                   </>}
-                  <div className="space-y-3 lg:order-1">
+                  <div className="space-y-3 md:order-1">
                   <Button type="button" onClick={() => void passkeyLogin()} disabled={loading || unavailable} className="cta-glow h-auto min-h-12 w-full gap-2 whitespace-normal px-4 py-3 text-center text-sm leading-tight sm:text-base">
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fingerprint className="h-4 w-4 shrink-0" />} <span className="min-w-0">{t("auth.passkey")}</span>
                   </Button>
