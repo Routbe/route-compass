@@ -528,8 +528,14 @@ export async function issueAuthorizationCode(input: {
   nonce?: string | null;
   acr?: string | null;
   richIdentity?: boolean;
+  /** Blind Hash Matching: sealed into the code itself, never stored in a column. */
+  disclosure?: import("./blind-hash").BhmIdentity | null;
 }): Promise<string> {
-  const code = randomToken(32);
+  let code = randomToken(32);
+  if (input.disclosure) {
+    const { sealCodeDisclosure } = await import("./code-disclosure.server");
+    code = await sealCodeDisclosure(code, input.disclosure, process.env["BETTER_AUTH_SECRET"] ?? "");
+  }
   const hash = await sha256Base64Url(code);
   const expires = new Date(Date.now() + CODE_TTL_MS).toISOString();
   await sql`insert into public.oauth_auth_codes
@@ -626,6 +632,14 @@ export async function exchangeAuthorizationCode(input: {
   const { agentTokenTtl } = await import("@/lib/agent/agent-scopes");
   const ttl = agentTokenTtl(Math.min(Math.max(client.accessTokenTtl, TOKEN_TTL_MIN), TOKEN_TTL_MAX), scopes);
   const claims = await identityClaims(userId, scopes, { handleSync: client.handleSyncEnabled, clientId: client.clientId });
+  // Blind Hash Matching: the one identity the member confirmed, id_token only
+  // (never in userinfo, introspection or refresh), and only with the scope.
+  const idOnlyClaims: Record<string, unknown> = {};
+  if (scopes.includes("accounts:merge")) {
+    const { openCodeDisclosure } = await import("./code-disclosure.server");
+    const matched = await openCodeDisclosure(input.code, process.env["BETTER_AUTH_SECRET"] ?? "");
+    if (matched) idOnlyClaims["rout_matched_account"] = { kind: matched.kind, value: matched.value };
+  }
   // Rich Identity: enkel als de app het aanzette én de gebruiker het aanvinkte.
   if (row["rich_identity"] && client.richIdentityEnabled) {
     try {
@@ -655,6 +669,7 @@ export async function exchangeAuthorizationCode(input: {
     ...(row["nonce"] ? { nonce: String(row["nonce"]) } : {}),
     ...(row["acr"] ? { acr: String(row["acr"]) } : {}),
     ...claims,
+    ...idOnlyClaims,
   });
   const accessToken = await signJwt({
     iss: issuer(),
