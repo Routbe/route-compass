@@ -105,7 +105,7 @@
   "auth.scope.openid": "Verify your identity with a unique ROUT ID.",
   "auth.scope.profile": "Your public name, handle and profile picture.",
   "auth.scope.email": "Your email address and its verification status.",
-  "auth.scope.linked_accounts": "The accounts you linked to ROUT, to prevent duplicate accounts.",
+  "auth.scope.linked_accounts": "Legacy permission without data: ROUT never shares which other accounts you linked.",
   "auth.consent.summary": "This app requests access to the following information.",
   "auth.consent.identityOnly": "This app only requests confirmation of your identity.",
   "auth.consent.mismatch": "The redirect URL {{received}} does not match the registered URLs: {{expected}}.",
@@ -317,5 +317,7 @@
   "auth.consent.bhm.title": "We found your existing account at {{app}}",
   "auth.consent.bhm.body": "Your browser compared this itself; {{app}} cannot see your other accounts. Choose how to continue.",
   "auth.consent.bhm.provider": "Your {{provider}} account",
-  "auth.consent.bhm.none": "Don't merge, start as a new account"
+  "auth.consent.bhm.none": "Don't merge, start as a new account",
+  "auth.consent.incremental": "{{app}} now asks for extra access. Your earlier permission stays as it is.",
+  "auth.consent.previously": "Already shared with {{app}}: {{count}} items. You can revoke them under Connected apps."
 }

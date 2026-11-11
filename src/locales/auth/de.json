@@ -105,7 +105,7 @@
   "auth.scope.openid": "Deine Identität mit einer eindeutigen ROUT-ID bestätigen.",
   "auth.scope.profile": "Dein öffentlicher Name, Nutzername und Profilbild.",
   "auth.scope.email": "Deine E-Mail-Adresse und ihr Bestätigungsstatus.",
-  "auth.scope.linked_accounts": "Die mit ROUT verknüpften Konten, um doppelte Konten zu vermeiden.",
+  "auth.scope.linked_accounts": "Alte Berechtigung ohne Daten: ROUT teilt nie, welche anderen Konten du verknüpft hast.",
   "auth.consent.summary": "Diese App fordert Zugriff auf folgende Daten an.",
   "auth.consent.identityOnly": "Diese App möchte nur deine Identität bestätigen.",
   "auth.consent.mismatch": "Die Weiterleitungs-URL {{received}} stimmt nicht mit den registrierten URLs überein: {{expected}}.",
@@ -317,5 +317,7 @@
   "auth.consent.bhm.title": "Wir haben dein bestehendes Konto bei {{app}} gefunden",
   "auth.consent.bhm.body": "Dein Browser hat selbst verglichen; {{app}} sieht deine anderen Konten nicht. Wähle, wie du weitermachst.",
   "auth.consent.bhm.provider": "Dein {{provider}}-Konto",
-  "auth.consent.bhm.none": "Nicht zusammenführen, als neues Konto starten"
+  "auth.consent.bhm.none": "Nicht zusammenführen, als neues Konto starten",
+  "auth.consent.incremental": "{{app}} fragt jetzt nach zusätzlichem Zugriff. Deine frühere Zustimmung bleibt unverändert.",
+  "auth.consent.previously": "Bereits mit {{app}} geteilt: {{count}} Elemente. Widerrufen kannst du sie unter Verbundene Apps."
 }

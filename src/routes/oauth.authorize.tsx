@@ -367,6 +367,13 @@ function AuthorizePage() {
   const handle = prompt.account?.handle;
   const needsCode = Boolean(prompt.requiresStepUp) && !stepUpDone;
   const scopes = prompt.scopes ?? [];
+  // Incremental consent ("Verifieer met ROUT"): after an earlier grant, show only
+  // what is new — unless the app explicitly asked prompt=consent.
+  const granted = prompt.grantedScopes ?? [];
+  const forceConsent = (search.prompt ?? "").split(" ").includes("consent");
+  const newScopes = scopes.filter((s) => s !== "openid" && !granted.includes(s));
+  const incremental = !forceConsent && granted.some((s) => s !== "openid") && newScopes.length > 0;
+  const shownScopes = incremental ? newScopes : scopes;
 
   return (
     <main className="dark flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
@@ -470,9 +477,9 @@ function AuthorizePage() {
         )}
 
         {/* Transparantie */}
-        <p className="mt-6 text-sm">{t(scopes.some((scope) => scope !== "openid") ? "auth.consent.summary" : "auth.consent.identityOnly")}</p>
+        <p className="mt-6 text-sm">{incremental ? t("auth.consent.incremental", { app: appName }) : t(scopes.some((scope) => scope !== "openid") ? "auth.consent.summary" : "auth.consent.identityOnly")}</p>
         <ul className="mt-3 space-y-2">
-          {scopes.map((scope) => {
+          {shownScopes.map((scope) => {
             const item = SCOPE_TEXT[scope];
             const Icon = item?.icon ?? ShieldCheck;
             return (
@@ -498,6 +505,11 @@ function AuthorizePage() {
             );
           })}
         </ul>
+        {incremental && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t("auth.consent.previously", { app: appName, count: String(granted.filter((s) => s !== "openid").length) })}
+          </p>
+        )}
 
         {prompt.trustedKycPartner && (
           <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
