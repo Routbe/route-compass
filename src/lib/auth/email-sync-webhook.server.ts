@@ -57,7 +57,9 @@ export async function dispatchEmailUpdated(userId: string, changes: BulkChange[]
   if (!changes.length) return;
   const ids = changes.map((c) => c.clientId);
   const rows = (await sql`select client_id, backchannel_webhook_url, backchannel_webhook_secret_sealed, backchannel_webhook_secret_iv
-    from public.oauth_clients where client_id = any(${ids}) and backchannel_webhook_url is not null`) as Record<string, unknown>[];
+    from public.oauth_clients c where client_id = any(${ids}) and backchannel_webhook_url is not null
+      and exists (select 1 from public.oauth_consents k where k.user_id = ${userId} and k.client_id = c.client_id
+        and k.revoked_at is null and 'email' = any(k.scopes))`) as Record<string, unknown>[];
   const { getPairwiseSubject } = await import("./oidc-identifiers.server");
   await Promise.all(rows.map(async (r) => {
     const clientId = String(r["client_id"]);
