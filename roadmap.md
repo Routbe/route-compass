@@ -127,6 +127,6 @@
 - [x] /u/<workspace> stuurt door naar /w/<workspace>
 - [ ] Teamleden kunnen apps van een collega ook bewerken (nu alleen bekijken)
 - [ ] Stapsgewijze toestemming (Verifieer met ROUT)
-- [ ] Accounts herkennen / samenvoegen / meerdere kiezen + infolijntje
+- [ ] Blind account matching (app stuurt gehashte claim, ROUT antwoordt alleen ja/nee na bevestiging van het lid) — linked_accounts-lijst is uitgeschakeld
 - [ ] Connect with ROUT: e-mail overal tegelijk wijzigen
 - [ ] ROUT-gebruikersnamen voor apps

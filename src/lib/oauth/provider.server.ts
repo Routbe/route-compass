@@ -733,10 +733,9 @@ export async function identityClaims(
       }
     }
   }
-  if (scopes.includes("linked_accounts")) {
-    // Alleen dienst + account-ID: genoeg om dubbele accounts bij de app te voorkomen.
-    claims["linked_accounts"] = await linkedAccountsOf(userId);
-  }
+  // `linked_accounts` is retired: a list of a member's other sign-ins is a
+  // cross-app correlation risk. The scope is still accepted so existing apps
+  // keep working, but the claim is never emitted (blind account matching only).
   return claims;
 }
 

@@ -52,7 +52,6 @@ const SCOPES = [
   { id: "openid", label: "openid", text: "Verplicht. Geeft een unieke ROUT-ID (sub).", locked: true },
   { id: "profile", label: "profile", text: "Naam, handle en avatar." },
   { id: "email", label: "email", text: "E-mailadres en of het geverifieerd is." },
-  { id: "linked_accounts", label: "linked_accounts", text: "Gekoppelde sociale accounts (met toestemming)." },
 ];
 
 const STEPS = ["App-info", "Terug-adressen", "Sleutels", "Overzicht"];
