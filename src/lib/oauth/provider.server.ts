@@ -160,11 +160,11 @@ function toClient(row: Row): OAuthClient {
 
 /* ----------------------------------------------------------------- client */
 
-/** Personal scope (workspaceId null) lists only personal apps; a workspace lists only its own apps. */
+/** Personal scope (workspaceId null) lists the caller's personal apps; a workspace lists every app of that workspace (RLS limits it to members). */
 export async function listClients(ownerUserId: string, workspaceId: string | null = null): Promise<OAuthClient[]> {
   const rows = (workspaceId
     ? await sql`select * from public.oauth_clients
-        where owner_user_id = ${ownerUserId} and workspace_id = ${workspaceId}::uuid order by created_at desc`
+        where workspace_id = ${workspaceId}::uuid order by created_at desc`
     : await sql`select * from public.oauth_clients
         where owner_user_id = ${ownerUserId} and workspace_id is null order by created_at desc`) as Row[];
   return rows.map(toClient);

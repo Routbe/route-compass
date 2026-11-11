@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, BookOpen, Bot, Check, Database, Globe, KeyRound, MonitorSmartphone, Plus, Smartphone, Sparkles, Terminal, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import { withStepUp } from "@/components/auth/StepUpDialog";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { CodeBlock } from "@/components/console/CodeBlock";
 import { AppLogo } from "@/components/console/AppLogo";
@@ -85,11 +86,14 @@ function NewAppWizard() {
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   const redirects = draft.redirects.map((r) => r.trim()).filter(Boolean);
   const duplicates = new Set(redirects.filter((r, i) => redirects.indexOf(r) !== i));
+  const hostOf = (v: string) => { try { return new URL(v).host; } catch { return null; } };
+  const firstHost = redirects.map(hostOf).find(Boolean) ?? null;
   const redirectErrors = draft.redirects.map((r) => {
     const v = r.trim();
     if (!v) return null;
     if (!redirectUriSchema.safeParse(v).success) return "https verplicht (http enkel voor localhost), geen * en geen #fragment";
     if (duplicates.has(v)) return "Dit adres staat er al";
+    if (firstHost && hostOf(v) && hostOf(v) !== firstHost) return `Alle adressen moeten op hetzelfde domein staan (${firstHost}).`;
     return null;
   });
   const step1Ok = draft.name.trim().length >= 2 && isHttps(draft.homepageUrl.trim()) && (!draft.logoUrl || isHttps(draft.logoUrl));
@@ -99,7 +103,7 @@ function NewAppWizard() {
   const create = async () => {
     setBusy(true);
     try {
-      const res = (await save({
+      const res = (await withStepUp(() => save({
         data: {
           name: draft.name.trim(),
           description: draft.description.trim() || null,
@@ -109,7 +113,7 @@ function NewAppWizard() {
           scopes: draft.scopes as never,
           richIdentityEnabled: draft.richIdentity,
         },
-      })) as { client: { id: string; clientId: string }; clientSecret: string | null };
+      }))) as { client: { id: string; clientId: string }; clientSecret: string | null };
       await saveSettings({ data: { id: res.client.id, requirePkce: true, accountDiscoveryEnabled: draft.autoDiscovery } });
       await qc.invalidateQueries({ queryKey: APPS_KEY });
       sessionStorage.removeItem(STORAGE_KEY);
