@@ -130,3 +130,4 @@
 - [ ] Accounts samenvoegen: keuze tussen "zelf aanvinken op ROUT-scherm" (selective disclosure) en "automatisch zoeken via versleutelde vergelijking" (PSI/OPRF) — wacht op keuze eigenaar
 - [ ] Connect with ROUT: e-mail overal tegelijk wijzigen
 - [ ] ROUT-gebruikersnamen voor apps
+- [ ] AI-prompts voor ontwikkelaars nakijken: volledige prompt bij nieuwe app, aparte prompt per wijziging, juiste ROUT-logo en knop
