@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { RoutLogo } from "@/components/RoutLogo";
 import { BadgeCheck, Bot, Check, Eye, Fingerprint, IdCard, KeyRound, Loader2, Lock, Mail, PenLine, QrCode, ShieldCheck, User } from "lucide-react";
 import { OPTIONAL_SCOPES } from "@/lib/oauth/scope-rules";
+import { BHM_PARAM, BHM_SCOPE, parseBlindHashes, type BhmIdentity } from "@/lib/oauth/blind-hash";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   addOwnerRedirect,
   describeAuthorizeRequest,
   decideAuthorizeRequest,
+  getMyMatchIdentities,
   sendStepUpCode,
   verifyStepUp,
   startPasskeyStepUpFn,
@@ -89,6 +91,7 @@ const SCOPE_TEXT: Record<string, { icon: typeof User; text: string }> = {
     icon: ShieldCheck,
     text: "auth.scope.linked_accounts",
   },
+  "accounts:merge": { icon: ShieldCheck, text: "auth.scope.accountsMerge" },
   "sybil:verify": { icon: Fingerprint, text: "auth.scope.sybil" },
   "profile:read": { icon: User, text: "auth.scope.profileRead" },
   "identity:legal_name": { icon: IdCard, text: "auth.scope.legalName" },
@@ -134,6 +137,12 @@ function AuthorizePage() {
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
   const [stepUpDone, setStepUpDone] = useState(false);
+  // Blind Hash Matching: partner hashes arrive in the URL fragment (never sent to
+  // any server), are kept for this tab only and compared inside the enclave worker.
+  const [blindHashes, setBlindHashes] = useState<string[]>([]);
+  const [matches, setMatches] = useState<BhmIdentity[]>([]);
+  const [matchChoice, setMatchChoice] = useState<number | null>(null);
+  const matchIdentities = useServerFn(getMyMatchIdentities);
 
   const payload = {
     clientId: search.client_id ?? "",
@@ -219,6 +228,39 @@ function AuthorizePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, search.client_id, search.redirect_uri, search.scope, search.code_challenge]);
 
+  useEffect(() => {
+    const key = `rout.bhm.${search.client_id ?? ""}`;
+    const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, "")).get(BHM_PARAM);
+    if (fromHash) {
+      sessionStorage.setItem(key, fromHash);
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    }
+    setBlindHashes(parseBlindHashes(sessionStorage.getItem(key)));
+  }, [search.client_id]);
+
+  const wantsMerge = (prompt?.scopes ?? []).includes(BHM_SCOPE);
+  useEffect(() => {
+    if (!user || !prompt?.ok || !wantsMerge || blindHashes.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { identities } = await matchIdentities();
+        const { enclave } = await import("@/lib/crypto-enclave/client");
+        const hits = await enclave.bhm.match(payload.clientId, blindHashes, identities);
+        // Keep only matching identities; the rest is dropped from this screen.
+        const found = hits.map((i) => identities[i]).filter((i): i is BhmIdentity => Boolean(i));
+        if (!cancelled) {
+          setMatches(found);
+          setMatchChoice(found.length === 1 ? 0 : null);
+        }
+      } catch {
+        if (!cancelled) setMatches([]);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, prompt?.ok, wantsMerge, blindHashes.join(",")]);
+
   async function requestCode() {
     setBusy(true);
     setCodeError(null);
@@ -264,7 +306,11 @@ function AuthorizePage() {
   async function choose(allow: boolean) {
     setBusy(true);
     try {
-      const result = await decide({ data: { ...payload, allow, richIdentityOptIn: richOptIn, emailChoice: emailChoice ?? prompt?.emailChoice, declinedScopes: prompt?.trustedKycPartner ? declined : [...declined, "identity:national_id"] } });
+      const result = await decide({ data: { ...payload, allow, richIdentityOptIn: richOptIn, emailChoice: emailChoice ?? prompt?.emailChoice, declinedScopes: prompt?.trustedKycPartner ? declined : [...declined, "identity:national_id"],
+        ...(allow && matchChoice !== null && matches[matchChoice] && !declined.includes(BHM_SCOPE)
+          ? { blindHashes, matchedIdentity: matches[matchChoice] }
+          : {}) } });
+      sessionStorage.removeItem(`rout.bhm.${payload.clientId}`);
       if ("redirectTo" in result) window.location.href = result.redirectTo;
       else if (result.error.startsWith(t("auth.confirm"))) {
         setStepUpDone(false);
@@ -401,10 +447,26 @@ function AuthorizePage() {
             {t("auth.consent.switch")}
           </button>
         </div>
-        {scopes.includes("linked_accounts") && (prompt.linkedProviders?.length ?? 0) > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {t("auth.consent.recognize", { name: appName, providers: prompt.linkedProviders!.map((p) => PROVIDER_LABEL[p] ?? p).join(", ") })}
-          </p>
+        {scopes.includes(BHM_SCOPE) && matches.length > 0 && !declined.includes(BHM_SCOPE) && (
+          <fieldset className="mt-4 rounded-2xl border border-primary/40 bg-primary/5 p-4">
+            <legend className="px-1 text-sm font-medium">{t("auth.consent.bhm.title", { app: appName })}</legend>
+            <p className="text-xs text-muted-foreground">{t("auth.consent.bhm.body", { app: appName })}</p>
+            <div className="mt-3 space-y-2">
+              {matches.map((m, i) => (
+                <label key={`${m.kind}:${m.value}`} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border bg-background p-3 text-sm">
+                  <input type="radio" name="bhm" className="h-4 w-4" checked={matchChoice === i} onChange={() => setMatchChoice(i)} />
+                  {m.kind === "email" ? <Mail className="h-4 w-4 shrink-0" aria-hidden /> : <User className="h-4 w-4 shrink-0" aria-hidden />}
+                  <span className="min-w-0 flex-1 truncate">
+                    {m.kind === "email" ? m.value : t("auth.consent.bhm.provider", { provider: PROVIDER_LABEL[m.kind] ?? m.kind })}
+                  </span>
+                </label>
+              ))}
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border bg-background p-3 text-sm text-muted-foreground">
+                <input type="radio" name="bhm" className="h-4 w-4" checked={matchChoice === null} onChange={() => setMatchChoice(null)} />
+                {t("auth.consent.bhm.none")}
+              </label>
+            </div>
+          </fieldset>
         )}
 
         {/* Transparantie */}

@@ -312,5 +312,10 @@
   "auth.mf.setupDone": "Two-step verification is on.",
   "auth.mf.setupSendSms": "Send code to {{to}}",
   "auth.mf.setupFailed": "Setup failed. Please try again.",
-  "auth.mf.signOut": "Sign out"
+  "auth.mf.signOut": "Sign out",
+  "auth.scope.accountsMerge": "Check whether you already have an account at {{app}}. Only an account you confirm is shared, once.",
+  "auth.consent.bhm.title": "We found your existing account at {{app}}",
+  "auth.consent.bhm.body": "Your browser compared this itself; {{app}} cannot see your other accounts. Choose how to continue.",
+  "auth.consent.bhm.provider": "Your {{provider}} account",
+  "auth.consent.bhm.none": "Don't merge, start as a new account"
 }
