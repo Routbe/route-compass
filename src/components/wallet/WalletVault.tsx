@@ -86,6 +86,7 @@ export function WalletVault({ only }: { /** Show just these passes (the wallet p
         <h3 id="wallet-vault-title" className="text-sm font-semibold">{t("vault.title")}</h3>
         <p className="text-xs text-muted-foreground">{t("vault.lead")}</p>
       </header>
+      {v && !v.verified && <p className="wallet-vault-warning"><TriangleAlert className="h-4 w-4 shrink-0" aria-hidden /> {t("vault.unverified")}</p>}
 
       {show("public") && <VaultCard kind="public" icon={<QrCode className="h-5 w-5" aria-hidden />} title={t("vault.public.title")} tag={t("vault.public.tag")} body={t("vault.public.body")}>
         {keys("PUBLIC_PROFILE", !!v?.google && !!root, { ok: !!v?.apple && !!root, href: `/api/wallet/profile/${encodeURIComponent(root ?? "")}?type=apple&space=root`, file: `rout-${root}.pkpass` })}
