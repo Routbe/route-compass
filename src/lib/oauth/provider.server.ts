@@ -787,6 +787,31 @@ export async function linkedAccountsOf(
   return out;
 }
 
+/**
+ * The member's own matchable identities for Blind Hash Matching: confirmed
+ * primary email, active email aliases and linked sign-in provider ids. Only
+ * ever returned to the member themself, never to an app.
+ */
+export async function matchableIdentitiesOf(userId: string): Promise<import("./blind-hash").BhmIdentity[]> {
+  const { bhmKindForProvider, normalizeIdentityValue } = await import("./blind-hash");
+  const out: import("./blind-hash").BhmIdentity[] = [];
+  const add = (i: import("./blind-hash").BhmIdentity) => {
+    const v = normalizeIdentityValue(i.kind, i.value);
+    if (v && !out.some((o) => o.kind === i.kind && o.value === v)) out.push({ kind: i.kind, value: v });
+  };
+  const u = ((await sql`select email, email_confirmed_at from public.users where id = ${userId} limit 1`) as Row[])[0];
+  if (u?.["email"] && u["email_confirmed_at"]) add({ kind: "email", value: String(u["email"]) });
+  try {
+    const aliases = (await sql`select alias from public.email_aliases where user_id = ${userId} and status = 'active'`) as Row[];
+    aliases.forEach((a) => a["alias"] && add({ kind: "email", value: String(a["alias"]) }));
+  } catch { /* optional table */ }
+  for (const a of await linkedAccountsOf(userId)) {
+    const kind = bhmKindForProvider(a.provider);
+    if (kind) add({ kind, value: a.account_id });
+  }
+  return out.slice(0, 50);
+}
+
 /* ----------------------------------------------------- toegang & userinfo */
 
 /** De console staat alleen open voor geverifieerde (betalende) leden. */
