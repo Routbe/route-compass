@@ -131,3 +131,8 @@
 - [ ] Connect with ROUT: e-mail overal tegelijk wijzigen
 - [ ] ROUT-gebruikersnamen voor apps
 - [x] AI-prompts voor ontwikkelaars nakijken: volledige prompt bij nieuwe app, aparte prompt per wijziging, juiste ROUT-logo en knop
+
+## Current request (11 Nov 2026): finish open work, info pages, homepage
+- [ ] Finish open developer-console items that need no owner decision or external keys.
+- [ ] Audit about/info pages (ROUT Wallet, ROUT card, developer console, Login with ROUT…): correct, complete, enough pages.
+- [ ] Homepage: keep the current design direction, raise quality, add the missing information about what ROUT does and offers.
