@@ -1861,9 +1861,18 @@
   "vault.stealth.body": "Eine eigene Karte für deinen privaten Alias. Nicht mit deinem Hauptprofil verknüpfbar.",
   "vault.stealth.none": "Du hast noch keinen privaten Alias. Lege zuerst einen an.",
   "vault.key.title": "3 · Sovereign Key",
-  "vault.key.tag": "Hardware-Schlüssel · NFC · kein QR",
-  "vault.key.body": "Ein verschlüsselter Schlüssel für NFC-Zugang und -Zahlungen. Kein QR-Code und keine Profildaten auf dem Bildschirm.",
+  "vault.key.tag": "Bezahlen · NFC · QR, der sich jede Minute ändert",
+  "vault.key.body": "Deine sichere ROUT-Karte zum Bezahlen und für Zugang. Google Wallet: NFC plus ein QR, der sich jede Minute erneuert und nur einmal gilt. Apple Wallet: nur NFC. Keine Profildaten.",
   "vault.key.warning": "Behandle ihn wie einen physischen Schlüssel. Teile ihn nie.",
   "vault.key.pending": "Noch nicht verfügbar: wartet auf NFC-Freigabe von Google (Smart Tap) und Apple.",
-  "vault.offline": "Dieses Wallet ist noch nicht eingerichtet."
+  "vault.offline": "Dieses Wallet ist noch nicht eingerichtet.",
+  "card.front.title": "Großer QR auf der Vorderseite",
+  "card.front.lead": "Wähle, zu welcher Profilkarte der große QR auf der Vorderseite deiner ROUT-Karte führt.",
+  "card.front.root": "Öffentliches Profil",
+  "card.front.alias": "Alias-Profil",
+  "card.front.noAlias": "Du hast noch kein Alias-Profil; lege zuerst eines an, um es zu wählen.",
+  "card.front.aliasNote": "Achtung: Wer deine ROUT-Karte scannt, sieht dann, dass dieses Alias-Profil zu dir gehört.",
+  "card.front.back": "Der kleine QR auf der Rückseite ist immer dein sicherer Bezahlcode und führt nie zu einem Profil.",
+  "card.front.failed": "Speichern ist gerade nicht möglich.",
+  "vault.unverified": "Nur verifizierte Mitglieder erhalten Wallet-Karten. Verifiziere zuerst dein Profil."
 }
