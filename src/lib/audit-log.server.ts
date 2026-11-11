@@ -14,9 +14,23 @@ export interface SecurityEvent {
   payload?: Record<string, unknown>;
 }
 
+/**
+ * Visitor IP/user-agent hashes use a server-only key: the dedicated audit secret,
+ * else a domain-separated derivation of the auth secret. Without either, the
+ * values are not stored at all (a public fallback key would make them reversible).
+ */
+async function auditSalt(): Promise<string | null> {
+  const dedicated = process.env["ROUT_AUDIT_SIGNING_SECRET"];
+  if (dedicated) return dedicated;
+  const auth = process.env["BETTER_AUTH_SECRET"];
+  if (auth) return hmacSha256Hex(auth, "rout-audit-visitor-salt-v1");
+  return null;
+}
+
 async function salted(value: string | null | undefined): Promise<string | null> {
   if (!value) return null;
-  const salt = process.env["ROUT_AUDIT_SIGNING_SECRET"] ?? "rout-audit";
+  const salt = await auditSalt();
+  if (!salt) return null;
   return (await hmacSha256Hex(salt, value)).slice(0, 32);
 }
 
