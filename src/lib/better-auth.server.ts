@@ -225,21 +225,20 @@ export function createRoutAuth(request?: Request) {
       userInfoUrl: "https://login.infomaniak.com/oauth2/userinfo",
       scopes: ["openid", "email", "profile"],
       pkce: true,
-      // Snelheid: claims uit het id_token lezen en de extra userinfo-roundtrip
-      // naar Infomaniak alleen doen als e-mail daar ontbreekt.
+      // Identity comes only from Infomaniak's userinfo endpoint (server-to-server,
+      // authenticated with the access token). The id_token is never decoded here:
+      // its signature is not verified, so its claims cannot be trusted.
       getUserInfo: async (tokens: { idToken?: string; accessToken?: string }) => {
-        let p: Record<string, unknown> = {};
+        if (!tokens.accessToken) return null;
+        let p: Record<string, unknown>;
         try {
-          const part = tokens.idToken?.split(".")[1];
-          if (part) p = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
-        } catch {
-          p = {};
-        }
-        if (typeof p["email"] !== "string" && tokens.accessToken) {
           const r = await fetch("https://login.infomaniak.com/oauth2/userinfo", {
             headers: { authorization: `Bearer ${tokens.accessToken}` },
           });
-          if (r.ok) p = { ...p, ...((await r.json()) as Record<string, unknown>) };
+          if (!r.ok) return null;
+          p = (await r.json()) as Record<string, unknown>;
+        } catch {
+          return null;
         }
         const id = p["sub"] ?? p["id"];
         if (!id || typeof p["email"] !== "string") return null;
