@@ -114,7 +114,12 @@ function NewAppWizard() {
           richIdentityEnabled: draft.richIdentity,
         },
       }))) as { client: { id: string; clientId: string }; clientSecret: string | null };
-      await saveSettings({ data: { id: res.client.id, requirePkce: true, accountDiscoveryEnabled: draft.autoDiscovery } });
+      // The app already exists here; a failed settings save must not hide it.
+      try {
+        await saveSettings({ data: { id: res.client.id, requirePkce: true, accountDiscoveryEnabled: draft.autoDiscovery } });
+      } catch (e) {
+        toast.warning(errorText(e, "App aangemaakt, maar de beveiligingsinstellingen konden niet worden opgeslagen. Pas ze aan bij Beveiliging."));
+      }
       await qc.invalidateQueries({ queryKey: APPS_KEY });
       sessionStorage.removeItem(STORAGE_KEY);
       setResult({ id: res.client.id, clientId: res.client.clientId, secret: draft.type === "web" ? res.clientSecret : null });
