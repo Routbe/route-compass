@@ -437,11 +437,11 @@
   "community.metrics.verified": "Verified profiles",
   "community.reviews.title": "What members say",
   "console.aiPrompts.assistant": "Assistant",
-  "console.aiPrompts.auth": "1. Auth & Universal Handle Sync",
+  "console.aiPrompts.auth": "2. Universal Handle Sync only",
   "console.aiPrompts.badgePreview": "Preview: the badge endpoint is not live yet. The prompt builds it behind a feature flag.",
-  "console.aiPrompts.badges": "2. Badge Issuance API",
+  "console.aiPrompts.badges": "3. Badge Issuance API (not live yet)",
   "console.aiPrompts.desc": "Paste these into Lovable, Cursor or v0. Your app name and client_id are filled in — never your secret.",
-  "console.aiPrompts.full": "3. Full integration",
+  "console.aiPrompts.full": "1. Full integration (new app)",
   "console.aiPrompts.stack": "Stack",
   "console.aiPrompts.syncOff": "Universal Handle Sync is off: turn it on under Scopes so rout_handle is sent.",
   "console.aiPrompts.title": "AI Integration Prompts",
@@ -1874,5 +1874,11 @@
   "card.front.aliasNote": "Note: anyone who scans your ROUT card will then see that this alias profile belongs to you.",
   "card.front.back": "The small QR on the back is always your secure payment code and never links to a profile.",
   "card.front.failed": "Saving isn't possible right now.",
-  "vault.unverified": "Only verified members get wallet cards. Verify your profile first."
+  "vault.unverified": "Only verified members get wallet cards. Verify your profile first.",
+  "console.aiPrompts.changes.title": "Prompt for your latest changes",
+  "console.aiPrompts.changes.first": "New app? Paste the full prompt below into your AI first. Then click the button and every later change gets a short prompt for just that change.",
+  "console.aiPrompts.changes.markFull": "Full prompt is done",
+  "console.aiPrompts.changes.body": "Your settings changed since your last prompt. This prompt only applies that, without rebuilding your login.",
+  "console.aiPrompts.changes.markDone": "Change is done",
+  "console.aiPrompts.changes.none": "No changes since your last prompt."
 }
