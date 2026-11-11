@@ -25,8 +25,36 @@ async function hintAudience(hint: string | null): Promise<string | null> {
   }
 }
 
+const escapeHtml = (v: string) =>
+  v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+/** Cross-site logout requests get an explicit same-origin confirmation (POST) first. */
+function confirmPage(params: URLSearchParams): Response {
+  const keep = ["id_token_hint", "post_logout_redirect_uri", "state", "client_id", "ui_locales"];
+  const inputs = keep
+    .map((k) => [k, params.get(k)] as const)
+    .filter((e): e is readonly [string, string] => typeof e[1] === "string" && e[1].length > 0 && e[1].length <= 8192)
+    .map(([k, v]) => `<input type="hidden" name="${escapeHtml(k)}" value="${escapeHtml(v)}">`)
+    .join("");
+  const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Afmelden bij ROUT</title>
+<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;padding:1rem;box-sizing:border-box}main{max-width:24rem;text-align:center}button,a{display:inline-block;margin:.25rem;padding:.6rem 1.1rem;border-radius:.5rem;font:inherit;cursor:pointer}button{border:0;background:CanvasText;color:Canvas}a{border:1px solid currentColor;color:inherit;text-decoration:none}</style></head>
+<body><main><h1>Afmelden bij ROUT?</h1><p>Een app vraagt om je af te melden. Bevestig alleen als jij dit wilde.</p>
+<form method="post" action="/oauth/end-session">${inputs}<button type="submit">Afmelden</button><a href="/">Annuleren</a></form></main></body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
 async function handle(request: Request, params: URLSearchParams): Promise<Response> {
-  const { decideEndSessionRedirect } = await import("@/lib/oauth/end-session-rules");
+  const { decideEndSessionRedirect, isTrustedLogoutRequest } = await import("@/lib/oauth/end-session-rules");
+  const trusted = isTrustedLogoutRequest({
+    secFetchSite: request.headers.get("sec-fetch-site"),
+    origin: request.headers.get("origin"),
+    referer: request.headers.get("referer"),
+    selfHost: request.headers.get("host") ?? new URL(request.url).host,
+  });
+  if (!trusted) return confirmPage(params);
   const { getClientByClientId } = await import("@/lib/oauth/provider.server");
   const { APP_SESSION_COOKIE } = await import("@/lib/app-session.server");
   const aud = await hintAudience(params.get("id_token_hint"));

@@ -18,3 +18,24 @@ describe("RP-initiated logout redirect", () => {
     expect(decideEndSessionRedirect({ ...base, clientId: "c2", requested: "https://app.example.com/bye", hintAud: "c1" }).kind).toBe("local");
   });
 });
+
+import { isTrustedLogoutRequest } from "./end-session-rules";
+
+describe("isTrustedLogoutRequest", () => {
+  const base = { origin: null, referer: null, selfHost: "rout.be" };
+  it("trusts same-origin and typed navigations", () => {
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: "same-origin" })).toBe(true);
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: "none" })).toBe(true);
+  });
+  it("refuses cross-site and same-site-subdomain requests", () => {
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: "cross-site" })).toBe(false);
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: "same-site" })).toBe(false);
+  });
+  it("falls back to Origin, then Referer", () => {
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: null, origin: "https://rout.be" })).toBe(true);
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: null, origin: "https://evil.example" })).toBe(false);
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: null, origin: "null" })).toBe(false);
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: null, referer: "https://rout.be/x" })).toBe(true);
+    expect(isTrustedLogoutRequest({ ...base, secFetchSite: null })).toBe(false);
+  });
+});

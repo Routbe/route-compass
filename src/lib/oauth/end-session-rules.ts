@@ -27,3 +27,31 @@ export function decideEndSessionRedirect(input: {
   if (input.state) target.searchParams.set("state", input.state);
   return { kind: "redirect", target: target.toString() };
 }
+
+/**
+ * Logout CSRF guard: a session is only ended when the request demonstrably comes
+ * from ROUT itself (or a typed URL/bookmark). Cross-site GETs carry the Lax
+ * session cookie, so they get a confirmation page instead of an instant logout.
+ */
+export function isTrustedLogoutRequest(input: {
+  secFetchSite: string | null;
+  origin: string | null;
+  referer: string | null;
+  selfHost: string;
+}): boolean {
+  const site = input.secFetchSite?.toLowerCase() ?? null;
+  if (site) return site === "same-origin" || site === "none";
+  const hostOf = (v: string | null) => {
+    if (!v || v === "null") return null;
+    try {
+      return new URL(v).host.toLowerCase();
+    } catch {
+      return null;
+    }
+  };
+  const self = input.selfHost.toLowerCase();
+  const origin = hostOf(input.origin);
+  if (origin) return origin === self;
+  const referer = hostOf(input.referer);
+  return referer === self;
+}
