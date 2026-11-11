@@ -81,11 +81,35 @@ describe("Handle Sync in templates", () => {
   });
   it("adds username + webhook only when handle sync is on", () => {
     expect(buildAiPrompt(base, "cursor", "nextjs")).not.toContain("user.handle.updated");
-    expect(buildAiPrompt({ ...base, handleSyncEnabled: true }, "cursor", "nextjs")).toContain("user.handle.updated");
+    // ROUT sends no handle webhook yet, so the prompt must not ask for one.
+    expect(buildAiPrompt({ ...base, handleSyncEnabled: true }, "cursor", "nextjs")).not.toContain("user.handle.updated");
+    expect(buildAiPrompt({ ...base, handleSyncEnabled: true }, "cursor", "nextjs")).toContain("every login");
     expect(buildSqlSchema(base)).not.toContain("username");
-    expect(buildSqlSchema({ ...base, handleSyncEnabled: true })).toContain("rout_webhook_events");
-    expect(buildPrismaSchema({ ...base, handleSyncEnabled: true })).toContain("RoutWebhookEvent");
+    expect(buildSqlSchema({ ...base, handleSyncEnabled: true })).not.toContain("rout_webhook_events");
+    expect(buildPrismaSchema({ ...base, handleSyncEnabled: true })).not.toContain("RoutWebhookEvent");
     expect(claimsForScopes(["openid", "profile"], true)).toContain("rout_handle");
     expect(claimsForScopes(["openid", "email"], true)).not.toContain("rout_handle");
+  });
+});
+
+import { buildChangePrompt, promptSnapshot } from "./integration-templates";
+describe("change prompts", () => {
+  const base = { clientId: "rout_x", scopes: ["openid", "email"], redirectUris: ["https://x.be/cb"], requirePkce: true, richIdentityEnabled: false, accountDiscoveryEnabled: false };
+  it("is null when nothing changed", () => {
+    expect(buildChangePrompt(promptSnapshot(base), base, "generic", "other")).toBeNull();
+  });
+  it("only describes the added scope and tells the AI not to rebuild login", () => {
+    const p = buildChangePrompt(promptSnapshot(base), { ...base, scopes: [...base.scopes, "accounts:merge"] }, "lovable", "tanstack")!;
+    expect(p).toContain("Scope added: `accounts:merge`");
+    expect(p).toContain("#rout_blind_hashes=");
+    expect(p).toContain("Do NOT rebuild");
+    expect(p).not.toContain("Scope removed");
+  });
+  it("never offers linked_accounts claims any more", () => {
+    expect(CLAIMS_SUPPORTED).not.toContain("linked_accounts" as never);
+    expect(buildAiPrompt({ ...base, scopes: ["openid", "linked_accounts"] }, "generic", "other")).not.toContain("linked_accounts[]");
+  });
+  it("the full prompt hashes with the app's own client id", () => {
+    expect(buildAiPrompt({ ...base, scopes: ["openid", "accounts:merge"] }, "generic", "other")).toContain("rout-bhm-v1|rout_x|");
   });
 });

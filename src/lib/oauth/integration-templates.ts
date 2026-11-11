@@ -326,3 +326,84 @@ export function handleUpdatedSample(clientId: string): string {
     2,
   );
 }
+
+/* ------------------------------------------------------- change prompts */
+
+/** The settings a prompt depends on; stored as a snapshot once a prompt was used. */
+export type PromptSnapshot = Pick<TemplateApp, "clientId" | "scopes" | "redirectUris" | "requirePkce" | "richIdentityEnabled" | "accountDiscoveryEnabled" | "handleSyncEnabled">;
+
+export function promptSnapshot(app: TemplateApp): PromptSnapshot {
+  return {
+    clientId: app.clientId,
+    scopes: [...app.scopes].sort(),
+    redirectUris: [...app.redirectUris],
+    requirePkce: app.requirePkce,
+    richIdentityEnabled: app.richIdentityEnabled,
+    accountDiscoveryEnabled: app.accountDiscoveryEnabled,
+    handleSyncEnabled: Boolean(app.handleSyncEnabled),
+  };
+}
+
+const TOGGLES: { key: "richIdentityEnabled" | "accountDiscoveryEnabled" | "handleSyncEnabled"; feature: string; label: string }[] = [
+  { key: "richIdentityEnabled", feature: "rich", label: "Rich Identity (rout_public_activity)" },
+  { key: "accountDiscoveryEnabled", feature: "discovery", label: "Account Discovery" },
+  { key: "handleSyncEnabled", feature: "handle", label: "Universal Handle Sync (rout_handle)" },
+];
+
+/**
+ * A prompt for only what changed since `prev`, so the developer's AI edits the
+ * existing ROUT integration instead of rebuilding it. Null when nothing changed.
+ */
+export function buildChangePrompt(prev: PromptSnapshot, nextApp: TemplateApp, tool: AiTool, stack: Stack): string | null {
+  const next = promptSnapshot(nextApp);
+  const added = next.scopes.filter((s) => !prev.scopes.includes(s));
+  const removed = prev.scopes.filter((s) => !next.scopes.includes(s));
+  const newUris = next.redirectUris.filter((u) => !prev.redirectUris.includes(u));
+  const goneUris = prev.redirectUris.filter((u) => !next.redirectUris.includes(u));
+  const features = featureInstructions(nextApp);
+  const changes: string[] = [];
+  const todo: string[] = [];
+
+  for (const s of added) {
+    changes.push(`- Scope added: \`${s}\``);
+    todo.push(`- Add \`${s}\` to the requested scopes.${SCOPE_CLAIMS[s]?.length ? ` New claims: ${SCOPE_CLAIMS[s]!.join(", ")}.` : ""}`);
+    if (features[s]) todo.push(...features[s]!);
+  }
+  for (const s of removed) {
+    changes.push(`- Scope removed: \`${s}\``);
+    todo.push(`- Stop requesting \`${s}\`.${SCOPE_CLAIMS[s]?.length ? ` Treat ${SCOPE_CLAIMS[s]!.join(", ")} as absent; never fail login on it, and stop showing or overwriting that data.` : ""}`);
+  }
+  for (const t of TOGGLES) {
+    if (Boolean(prev[t.key]) === Boolean(next[t.key])) continue;
+    if (next[t.key]) {
+      changes.push(`- Turned on: ${t.label}`);
+      todo.push(...(features[t.feature] ?? []));
+    } else {
+      changes.push(`- Turned off: ${t.label}`);
+      todo.push(`- ${t.label} is off: the related claim no longer arrives. Remove the code path that depends on it and keep existing rows unchanged.`);
+    }
+  }
+  if (prev.requirePkce !== next.requirePkce) {
+    changes.push(`- PKCE is now ${next.requirePkce ? "required" : "optional"}`);
+    todo.push(next.requirePkce ? "- Make sure every authorization request sends code_challenge (S256) and the token request sends code_verifier." : "- Keep using PKCE S256 anyway; it stays recommended.");
+  }
+  if (newUris.length || goneUris.length) {
+    changes.push(`- Redirect URIs changed${newUris.length ? ` (added: ${newUris.join(", ")})` : ""}${goneUris.length ? ` (removed: ${goneUris.join(", ")})` : ""}`);
+    todo.push(`- Use exactly one of these registered redirect URIs, byte-for-byte: ${next.redirectUris.join(" , ") || "NONE — ask for one before continuing"}. Remove any code that still sends a removed URI.`);
+  }
+  if (!changes.length) return null;
+  return [
+    ...promptIntro(tool, stack),
+    `My app already has a working "Login with ROUT" integration (client_id ${next.clientId}, discovery ${DISCOVERY_URL}). Do NOT rebuild or replace it.`,
+    "Change only what is listed below and keep the official ROUT button and logo exactly as they are.",
+    "",
+    "## What changed in my ROUT settings",
+    ...changes,
+    "",
+    "## Do exactly this",
+    ...todo,
+    "",
+    "## Then",
+    "- Update or add tests for the changed behaviour only.",
+  ].join("\n");
+}
