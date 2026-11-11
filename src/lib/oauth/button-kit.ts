@@ -6,7 +6,7 @@ export const ROUT_BUTTON_LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox
 export type RoutButtonTheme = "light" | "dark";
 
 export function routButtonSnippet(mode: "login" | "connect", theme: RoutButtonTheme = "dark") {
-  const label = mode === "login" ? "Doorgaan met ROUT" : "Connect ROUT";
+  const label = mode === "login" ? "Doorgaan met ROUT" : "Verbinden met ROUT";
   return `<!-- Implement this POST handler in YOUR app before enabling this button.
 It creates state, nonce and PKCE, then redirects using OIDC discovery.
 Connect requires an existing local session and never replaces that session.
