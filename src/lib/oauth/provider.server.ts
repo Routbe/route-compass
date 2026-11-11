@@ -528,8 +528,14 @@ export async function issueAuthorizationCode(input: {
   nonce?: string | null;
   acr?: string | null;
   richIdentity?: boolean;
+  /** Blind Hash Matching: sealed into the code itself, never stored in a column. */
+  disclosure?: import("./blind-hash").BhmIdentity | null;
 }): Promise<string> {
-  const code = randomToken(32);
+  let code = randomToken(32);
+  if (input.disclosure) {
+    const { sealCodeDisclosure } = await import("./code-disclosure.server");
+    code = await sealCodeDisclosure(code, input.disclosure, process.env["BETTER_AUTH_SECRET"] ?? "");
+  }
   const hash = await sha256Base64Url(code);
   const expires = new Date(Date.now() + CODE_TTL_MS).toISOString();
   await sql`insert into public.oauth_auth_codes
@@ -626,6 +632,14 @@ export async function exchangeAuthorizationCode(input: {
   const { agentTokenTtl } = await import("@/lib/agent/agent-scopes");
   const ttl = agentTokenTtl(Math.min(Math.max(client.accessTokenTtl, TOKEN_TTL_MIN), TOKEN_TTL_MAX), scopes);
   const claims = await identityClaims(userId, scopes, { handleSync: client.handleSyncEnabled, clientId: client.clientId });
+  // Blind Hash Matching: the one identity the member confirmed, id_token only
+  // (never in userinfo, introspection or refresh), and only with the scope.
+  const idOnlyClaims: Record<string, unknown> = {};
+  if (scopes.includes("accounts:merge")) {
+    const { openCodeDisclosure } = await import("./code-disclosure.server");
+    const matched = await openCodeDisclosure(input.code, process.env["BETTER_AUTH_SECRET"] ?? "");
+    if (matched) idOnlyClaims["rout_matched_account"] = { kind: matched.kind, value: matched.value };
+  }
   // Rich Identity: enkel als de app het aanzette én de gebruiker het aanvinkte.
   if (row["rich_identity"] && client.richIdentityEnabled) {
     try {
@@ -655,6 +669,7 @@ export async function exchangeAuthorizationCode(input: {
     ...(row["nonce"] ? { nonce: String(row["nonce"]) } : {}),
     ...(row["acr"] ? { acr: String(row["acr"]) } : {}),
     ...claims,
+    ...idOnlyClaims,
   });
   const accessToken = await signJwt({
     iss: issuer(),
@@ -770,6 +785,31 @@ export async function linkedAccountsOf(
     /* optional table */
   }
   return out;
+}
+
+/**
+ * The member's own matchable identities for Blind Hash Matching: confirmed
+ * primary email, active email aliases and linked sign-in provider ids. Only
+ * ever returned to the member themself, never to an app.
+ */
+export async function matchableIdentitiesOf(userId: string): Promise<import("./blind-hash").BhmIdentity[]> {
+  const { bhmKindForProvider, normalizeIdentityValue } = await import("./blind-hash");
+  const out: import("./blind-hash").BhmIdentity[] = [];
+  const add = (i: import("./blind-hash").BhmIdentity) => {
+    const v = normalizeIdentityValue(i.kind, i.value);
+    if (v && !out.some((o) => o.kind === i.kind && o.value === v)) out.push({ kind: i.kind, value: v });
+  };
+  const u = ((await sql`select email, email_confirmed_at from public.users where id = ${userId} limit 1`) as Row[])[0];
+  if (u?.["email"] && u["email_confirmed_at"]) add({ kind: "email", value: String(u["email"]) });
+  try {
+    const aliases = (await sql`select alias from public.email_aliases where user_id = ${userId} and status = 'active'`) as Row[];
+    aliases.forEach((a) => a["alias"] && add({ kind: "email", value: String(a["alias"]) }));
+  } catch { /* optional table */ }
+  for (const a of await linkedAccountsOf(userId)) {
+    const kind = bhmKindForProvider(a.provider);
+    if (kind) add({ kind, value: a.account_id });
+  }
+  return out.slice(0, 50);
 }
 
 /* ----------------------------------------------------- toegang & userinfo */

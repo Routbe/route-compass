@@ -437,11 +437,11 @@
   "community.metrics.verified": "Profils vérifiés",
   "community.reviews.title": "Ce que disent les membres",
   "console.aiPrompts.assistant": "Assistant",
-  "console.aiPrompts.auth": "1. Connexion & Universal Handle Sync",
+  "console.aiPrompts.auth": "2. Universal Handle Sync uniquement",
   "console.aiPrompts.badgePreview": "Aperçu : l'endpoint des badges n'est pas encore en ligne. Le prompt le construit derrière un feature flag.",
-  "console.aiPrompts.badges": "2. API d'émission de badges",
+  "console.aiPrompts.badges": "3. API d'émission de badges (pas encore en ligne)",
   "console.aiPrompts.desc": "Collez-les dans Lovable, Cursor ou v0. Le nom de l'app et le client_id sont remplis — jamais votre secret.",
-  "console.aiPrompts.full": "3. Intégration complète",
+  "console.aiPrompts.full": "1. Intégration complète (nouvelle app)",
   "console.aiPrompts.stack": "Stack",
   "console.aiPrompts.syncOff": "Universal Handle Sync est désactivé : activez-le dans Scopes pour envoyer rout_handle.",
   "console.aiPrompts.title": "Prompts d'intégration IA",
@@ -1874,5 +1874,11 @@
   "card.front.aliasNote": "Attention : quiconque scanne votre carte ROUT verra alors que ce profil alias vous appartient.",
   "card.front.back": "Le petit QR au verso est toujours votre code de paiement sécurisé et ne renvoie jamais vers un profil.",
   "card.front.failed": "L'enregistrement est impossible pour le moment.",
-  "vault.unverified": "Seuls les membres vérifiés reçoivent des cartes wallet. Vérifiez d'abord votre profil."
+  "vault.unverified": "Seuls les membres vérifiés reçoivent des cartes wallet. Vérifiez d'abord votre profil.",
+  "console.aiPrompts.changes.title": "Prompt pour vos dernières modifications",
+  "console.aiPrompts.changes.first": "Nouvelle app ? Collez d'abord le prompt complet ci-dessous dans votre IA. Cliquez ensuite sur le bouton : chaque modification suivante aura un prompt court rien que pour elle.",
+  "console.aiPrompts.changes.markFull": "Prompt complet appliqué",
+  "console.aiPrompts.changes.body": "Vos réglages ont changé depuis votre dernier prompt. Ce prompt n'applique que cela, sans reconstruire votre connexion.",
+  "console.aiPrompts.changes.markDone": "Modification appliquée",
+  "console.aiPrompts.changes.none": "Aucune modification depuis votre dernier prompt."
 }

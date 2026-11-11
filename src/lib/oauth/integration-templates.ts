@@ -64,14 +64,18 @@ export const SCOPE_CLAIMS: Record<string, string[]> = {
   openid: ["sub"],
   profile: ["preferred_username", "name", "picture"],
   email: ["email", "email_verified"],
-  linked_accounts: ["linked_accounts[].provider", "linked_accounts[].account_id"],
+  "profile:read": ["preferred_username", "name", "picture"],
+  "sybil:verify": ["is_unique_human", "app_sybil_nullifier"],
+  "identity:legal_name": ["first_name", "last_name", "full_legal_name"],
+  "accounts:merge": ["rout_matched_account"],
 };
 
 /** Every claim ROUT can ever send (advertised as `claims_supported` in discovery). */
 export const CLAIMS_SUPPORTED = [
   "sub", "iss", "aud", "exp", "iat", "nonce", "acr",
   "preferred_username", "name", "picture", "email", "email_verified",
-  "linked_accounts", "rout_handle", "rout_public_activity",
+  "rout_handle", "rout_public_activity", "rout_matched_account",
+  "is_unique_human", "app_sybil_nullifier", "first_name", "last_name", "full_legal_name",
 ] as const;
 
 export function claimsForScopes(scopes: string[], handleSync = false): string[] {
@@ -81,9 +85,49 @@ export function claimsForScopes(scopes: string[], handleSync = false): string[] 
   return [...out];
 }
 
+/** Scope-specific instructions shared by the full prompt and the change prompts. */
+export function featureInstructions(app: TemplateApp): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (app.scopes.includes("email")) {
+    out["email"] = [
+      "- `email` + `email_verified` come from the id_token/userinfo. The member may pick a private relay address for your app; treat it as a normal address and never ask for the 'real' one.",
+      "- Email sync (optional): if a webhook URL is registered in the ROUT console (Credentials), ROUT POSTs JSON `{ event: \"https://schemas.rout.be/events/user-email-updated\", sub, previous_email, new_email, updated_at }` with headers `x-rout-event: user.email_updated` and `x-rout-signature: t=<unix>,v1=<hex>`; v1 = HMAC-SHA256(ROUT_WEBHOOK_SECRET, `${t}.${rawBody}`). Verify in constant time, reject if |now - t| > 300 s, then update the email of the user whose rout_id = sub. `sub` is your app-specific id; no other user id is ever sent.",
+    ];
+  }
+  if (app.scopes.includes("accounts:merge")) {
+    out["accounts:merge"] = [
+      "- Blind Hash Matching (`accounts:merge`): before redirecting, build up to 20 hashes of identifiers you already hold for the person (e.g. from a 'forgot account' form or a remembered device): `sha256hex(\"rout-bhm-v1|" + app.clientId + "|\" + kind + \":\" + value)` where kind is email | google | github | gitlab | apple | microsoft | discord, emails trimmed + lower-cased, provider ids trimmed only.",
+      "- Append them to the authorize URL as a FRAGMENT: `#rout_blind_hashes=<hex>,<hex>` (never as a query parameter). ROUT never stores them; the member's browser compares them locally.",
+      "- If the member confirms a match, the id_token (only the id_token, not userinfo) contains `rout_matched_account: { kind, value }`. Link the ROUT `sub` to your existing user that owns exactly that identifier, inside a transaction, refusing if that user is already linked to another ROUT account. Absent claim = no match or member declined: continue as a new account.",
+    ];
+  }
+  if (app.scopes.includes("sybil:verify")) {
+    out["sybil:verify"] = ["- `sybil:verify` (userinfo): `is_unique_human` boolean and `app_sybil_nullifier` (stable per person for YOUR app only). Use the nullifier as a UNIQUE column to allow one account per real person. The member can decline this scope; handle `false`/absent."];
+  }
+  if (app.scopes.includes("identity:legal_name")) {
+    out["identity:legal_name"] = ["- `identity:legal_name` (userinfo): `first_name`, `last_name`, `full_legal_name` of a verified member; null when not verified or declined. Display them read-only; never let users edit a verified legal name."];
+  }
+  if (app.richIdentityEnabled) {
+    out["rich"] = ["- Rich Identity is enabled: when the member ticked the extra checkbox, the id_token contains `rout_public_activity` (array of { kind, title, occurred_at }). Store it in a jsonb column `rout_public_activity`, overwrite it on every login, and clear it when the claim is absent (the member withdrew consent). Never accept it from client input."];
+  }
+  if (app.handleSyncEnabled) {
+    out["handle"] = [
+      "- Universal Handle Sync is enabled: the `rout_handle` claim (requires the `profile` scope) is the user's username. Add a UNIQUE `username` column, set it from `rout_handle` on every login, and do NOT build a separate username picker or let users edit it.",
+      "- ROUT does not send handle-change webhooks yet: refresh `username` from `rout_handle` on every login. Do not build a handle webhook until ROUT announces it.",
+    ];
+  }
+  if (app.accountDiscoveryEnabled) {
+    out["discovery"] = [
+      "- Account Discovery is enabled: after a user-initiated authorization and verified callback, offer linking when email_verified is true and the email matches an existing local account. Require an authenticated local session, explicit consent and conflict checks; never merge solely because emails match.",
+      "- Authorization always requires an explicit button click or form submission. Do not implement silent sign-in or automatic redirects for account discovery.",
+    ];
+  }
+  return out;
+}
+
 export function buildAiPrompt(app: TemplateApp, tool: AiTool, stack: Stack): string {
   const scopes = app.scopes.join(" ");
-  const redirect = app.redirectUris[0];
+  const redirect = app.redirectUris.length ? app.redirectUris.join(" , ") : undefined;
   const lines = [
     TOOLS[tool],
     `Implement "Login with ROUT" (OpenID Connect) in ${STACKS[stack]}.`,
@@ -93,7 +137,7 @@ export function buildAiPrompt(app: TemplateApp, tool: AiTool, stack: Stack): str
     `- client_id: ${app.clientId}`,
     "- Confidential server client: read client_secret from ROUT_CLIENT_SECRET on the server. Public SPA/native client: use PKCE without a secret; never invent or embed one.",
     `- Scopes: ${scopes}`,
-    `- Redirect URI: ${redirect ?? "NOT CONFIGURED — request the exact registered URI before enabling authorization."}`,
+    `- Redirect URI(s), byte-for-byte exact: ${redirect ?? "NOT CONFIGURED — request the exact registered URI before enabling authorization."}`,
     `- PKCE: ${app.requirePkce ? "REQUIRED (S256)" : "recommended (S256)"}`,
     `- Claims you will receive (userinfo / id_token): ${claimsForScopes(app.scopes, app.handleSyncEnabled).join(", ")}`,
     "",
@@ -112,23 +156,7 @@ export function buildAiPrompt(app: TemplateApp, tool: AiTool, stack: Stack): str
     "- Add a unique `rout_id` (text, the `sub` claim) to the users table.",
     "- Add `email_verified` boolean from the email_verified claim.",
   ];
-  if (app.richIdentityEnabled) {
-    lines.push(
-      "- Rich Identity is enabled: when the member ticked the extra checkbox, the id_token contains `rout_public_activity` (array of { kind, title, occurred_at }). Store it in a jsonb column `rout_public_activity`, overwrite it on every login, and clear it when the claim is absent (the member withdrew consent). Never accept it from client input.",
-    );
-  }
-  if (app.handleSyncEnabled) {
-    lines.push(
-      "- Universal Handle Sync is enabled: the `rout_handle` claim (requires the `profile` scope) is the user's username. Add a UNIQUE `username` column, set it from `rout_handle` on every login, and do NOT build a separate username picker.",
-      "- Add a POST route `/api/webhooks/rout` for the `user.handle.updated` event: verify the `x-rout-signature` header (HMAC-SHA256 of `${t}.${rawBody}` with ROUT_WEBHOOK_SECRET, reject if older than 5 minutes), dedupe on the event `id`, find the user by `data.sub` and update `username` to `data.rout_handle`. Return 2xx quickly; ROUT retries non-2xx responses.",
-    );
-  }
-  if (app.accountDiscoveryEnabled) {
-    lines.push(
-      "- Account Discovery is enabled: after a user-initiated authorization and verified callback, offer linking when email_verified is true and the email matches an existing local account. Require an authenticated local session, explicit consent and conflict checks; never merge solely because emails match.",
-      "- Authorization always requires an explicit button click or form submission. Do not implement silent sign-in or automatic redirects for account discovery.",
-    );
-  }
+  for (const block of Object.values(featureInstructions(app))) lines.push(...block);
   lines.push(...brandingSection());
   lines.push(
     "",
@@ -168,16 +196,6 @@ create table user_identities (
 );
 -- Merge rule: only link when the id_token says email_verified = true.`;
   }
-  if (app.handleSyncEnabled) {
-    out += `
-
--- Universal Handle Sync: processed webhook events (idempotency)
-create table rout_webhook_events (
-  id          text primary key,          -- event id from ROUT
-  type        text not null,             -- 'user.handle.updated'
-  received_at timestamptz not null default now()
-);`;
-  }
   return out;
 }
 
@@ -209,17 +227,6 @@ model UserIdentity {
   @@unique([userId, provider])
 }`;
   }
-  if (app.handleSyncEnabled) {
-    out += `
-
-model RoutWebhookEvent {
-  id         String   @id
-  type       String
-  receivedAt DateTime @default(now()) @map("received_at")
-
-  @@map("rout_webhook_events")
-}`;
-  }
   return out;
 }
 
@@ -238,11 +245,10 @@ export function buildHandleSyncPrompt(app: PromptApp, tool: AiTool = "generic", 
     `I am building an app ("${app.name}") and want to integrate 'Login with ROUT' as my authentication and identity provider.`,
     `Please build the standard OIDC OAuth2 flow using the discovery URL: \`${DISCOVERY_URL}\`.`,
     `My Client ID is: ${app.clientId}.`,
-    "CRITICAL REQUIREMENT: Do not build a custom username system. Instead, extract the `rout_handle` claim from ROUT's UserInfo endpoint and map it directly as the primary unique `username` field in our database. Set up an API route to listen for ROUT's `user.handle.updated` webhook to keep the username in sync.",
+    "CRITICAL REQUIREMENT: Do not build a custom username system. Instead, extract the `rout_handle` claim from ROUT's UserInfo endpoint and map it directly as the primary unique `username` field in our database. Refresh it from `rout_handle` on every login (ROUT does not send handle-change webhooks yet; do not build one).",
     "",
     "## Configuration",
     "- Request the exact registered redirect URI before enabling the button. Confidential clients use ROUT_CLIENT_SECRET server-side; public clients use PKCE without a secret.",
-    "- Webhook secret: env var ROUT_WEBHOOK_SECRET (server only).",
     "- Scopes: `openid profile email` (`profile` is required for `rout_handle`).",
     "",
     "## Sign-in flow",
@@ -256,21 +262,15 @@ export function buildHandleSyncPrompt(app: PromptApp, tool: AiTool = "generic", 
     "",
     "## Database",
     "- users: `rout_id text unique not null`, `username text unique not null`, `email`, `email_verified`.",
-    "- rout_webhook_events: `id text primary key`, `type text`, `received_at timestamptz` (idempotency).",
     "- Users must not be able to edit `username` in your UI; show it as '@handle · managed by ROUT'.",
     "- Conflict: if another local row still holds that username (stale), clear it on that row first inside the same transaction.",
     "",
-    "## Webhook: POST /api/webhooks/rout",
-    "- Header `x-rout-signature: t=<unix>,v1=<hex>`; v1 = HMAC-SHA256(ROUT_WEBHOOK_SECRET, `${t}.${rawBody}`). Compare in constant time; reject if |now - t| > 300 s.",
-    "- Body: { id, type: 'user.handle.updated', created_at, client_id, data: { sub, previous_handle, rout_handle } }.",
-    "- Ignore events whose `client_id` is not mine. Skip already-seen `id`s. Update the user where rout_id = data.sub.",
-    "- Respond 200 within 5 s; ROUT retries non-2xx responses with backoff.",
     ...brandingSection(),
     "",
     "## Tests to write",
     "- First login creates a user with username = rout_handle.",
     "- Second login with a changed handle updates the username.",
-    "- Webhook with a bad signature → 401; with an old timestamp → 401; duplicate event id → 200 without changes.",
+    "- A username already held by a stale local row is cleared there first, in the same transaction.",
   ].join("\n");
 }
 
@@ -320,9 +320,90 @@ export function handleUpdatedSample(clientId: string): string {
       type: "user.handle.updated",
       created_at: "2026-10-10T10:40:00Z",
       client_id: clientId,
-      data: { sub: "8f0c2a4e-…", previous_handle: "oldname", rout_handle: "newname" },
+      data: { sub: "pw_3kq9…(app-specific)", previous_handle: "oldname", rout_handle: "newname" },
     },
     null,
     2,
   );
+}
+
+/* ------------------------------------------------------- change prompts */
+
+/** The settings a prompt depends on; stored as a snapshot once a prompt was used. */
+export type PromptSnapshot = Pick<TemplateApp, "clientId" | "scopes" | "redirectUris" | "requirePkce" | "richIdentityEnabled" | "accountDiscoveryEnabled" | "handleSyncEnabled">;
+
+export function promptSnapshot(app: TemplateApp): PromptSnapshot {
+  return {
+    clientId: app.clientId,
+    scopes: [...app.scopes].sort(),
+    redirectUris: [...app.redirectUris],
+    requirePkce: app.requirePkce,
+    richIdentityEnabled: app.richIdentityEnabled,
+    accountDiscoveryEnabled: app.accountDiscoveryEnabled,
+    handleSyncEnabled: Boolean(app.handleSyncEnabled),
+  };
+}
+
+const TOGGLES: { key: "richIdentityEnabled" | "accountDiscoveryEnabled" | "handleSyncEnabled"; feature: string; label: string }[] = [
+  { key: "richIdentityEnabled", feature: "rich", label: "Rich Identity (rout_public_activity)" },
+  { key: "accountDiscoveryEnabled", feature: "discovery", label: "Account Discovery" },
+  { key: "handleSyncEnabled", feature: "handle", label: "Universal Handle Sync (rout_handle)" },
+];
+
+/**
+ * A prompt for only what changed since `prev`, so the developer's AI edits the
+ * existing ROUT integration instead of rebuilding it. Null when nothing changed.
+ */
+export function buildChangePrompt(prev: PromptSnapshot, nextApp: TemplateApp, tool: AiTool, stack: Stack): string | null {
+  const next = promptSnapshot(nextApp);
+  const added = next.scopes.filter((s) => !prev.scopes.includes(s));
+  const removed = prev.scopes.filter((s) => !next.scopes.includes(s));
+  const newUris = next.redirectUris.filter((u) => !prev.redirectUris.includes(u));
+  const goneUris = prev.redirectUris.filter((u) => !next.redirectUris.includes(u));
+  const features = featureInstructions(nextApp);
+  const changes: string[] = [];
+  const todo: string[] = [];
+
+  for (const s of added) {
+    changes.push(`- Scope added: \`${s}\``);
+    todo.push(`- Add \`${s}\` to the requested scopes.${SCOPE_CLAIMS[s]?.length ? ` New claims: ${SCOPE_CLAIMS[s]!.join(", ")}.` : ""}`);
+    if (features[s]) todo.push(...features[s]!);
+  }
+  for (const s of removed) {
+    changes.push(`- Scope removed: \`${s}\``);
+    todo.push(`- Stop requesting \`${s}\`.${SCOPE_CLAIMS[s]?.length ? ` Treat ${SCOPE_CLAIMS[s]!.join(", ")} as absent; never fail login on it, and stop showing or overwriting that data.` : ""}`);
+  }
+  for (const t of TOGGLES) {
+    if (Boolean(prev[t.key]) === Boolean(next[t.key])) continue;
+    if (next[t.key]) {
+      changes.push(`- Turned on: ${t.label}`);
+      todo.push(...(features[t.feature] ?? []));
+    } else {
+      changes.push(`- Turned off: ${t.label}`);
+      todo.push(`- ${t.label} is off: the related claim no longer arrives. Remove the code path that depends on it and keep existing rows unchanged.`);
+    }
+  }
+  if (prev.requirePkce !== next.requirePkce) {
+    changes.push(`- PKCE is now ${next.requirePkce ? "required" : "optional"}`);
+    todo.push(next.requirePkce ? "- Make sure every authorization request sends code_challenge (S256) and the token request sends code_verifier." : "- Keep using PKCE S256 anyway; it stays recommended.");
+  }
+  if (newUris.length || goneUris.length) {
+    changes.push(`- Redirect URIs changed${newUris.length ? ` (added: ${newUris.join(", ")})` : ""}${goneUris.length ? ` (removed: ${goneUris.join(", ")})` : ""}`);
+    todo.push(`- Use exactly one of these registered redirect URIs, byte-for-byte: ${next.redirectUris.join(" , ") || "NONE — ask for one before continuing"}. Remove any code that still sends a removed URI.`);
+  }
+  if (!changes.length) return null;
+  return [
+    ...promptIntro(tool, stack),
+    `My app already has a working "Login with ROUT" integration (client_id ${next.clientId}, discovery ${DISCOVERY_URL}). Do NOT rebuild or replace it.`,
+    "Change only what is listed below and keep the official ROUT button and logo exactly as they are.",
+    "",
+    "## What changed in my ROUT settings",
+    ...changes,
+    "",
+    "## Do exactly this",
+    ...todo,
+    "",
+    "## Then",
+    "- Update or add tests for the changed behaviour only.",
+  ].join("\n");
 }

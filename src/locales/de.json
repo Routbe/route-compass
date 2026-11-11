@@ -437,11 +437,11 @@
   "community.metrics.verified": "Verifizierte Profile",
   "community.reviews.title": "Was Mitglieder sagen",
   "console.aiPrompts.assistant": "Assistent",
-  "console.aiPrompts.auth": "1. Login & Universal Handle Sync",
+  "console.aiPrompts.auth": "2. Nur Universal Handle Sync",
   "console.aiPrompts.badgePreview": "Vorschau: Der Badge-Endpunkt ist noch nicht live. Der Prompt baut ihn hinter einem Feature-Flag.",
-  "console.aiPrompts.badges": "2. Badge-Ausgabe-API",
+  "console.aiPrompts.badges": "3. Badge Issuance API (noch nicht live)",
   "console.aiPrompts.desc": "In Lovable, Cursor oder v0 einfügen. App-Name und client_id sind eingetragen — nie dein Secret.",
-  "console.aiPrompts.full": "3. Vollständige Integration",
+  "console.aiPrompts.full": "1. Vollständige Integration (neue App)",
   "console.aiPrompts.stack": "Stack",
   "console.aiPrompts.syncOff": "Universal Handle Sync ist aus: unter Scopes aktivieren, damit rout_handle gesendet wird.",
   "console.aiPrompts.title": "KI-Integrations-Prompts",
@@ -1874,5 +1874,11 @@
   "card.front.aliasNote": "Achtung: Wer deine ROUT-Karte scannt, sieht dann, dass dieses Alias-Profil zu dir gehört.",
   "card.front.back": "Der kleine QR auf der Rückseite ist immer dein sicherer Bezahlcode und führt nie zu einem Profil.",
   "card.front.failed": "Speichern ist gerade nicht möglich.",
-  "vault.unverified": "Nur verifizierte Mitglieder erhalten Wallet-Karten. Verifiziere zuerst dein Profil."
+  "vault.unverified": "Nur verifizierte Mitglieder erhalten Wallet-Karten. Verifiziere zuerst dein Profil.",
+  "console.aiPrompts.changes.title": "Prompt für deine letzten Änderungen",
+  "console.aiPrompts.changes.first": "Neue App? Füge zuerst den vollständigen Prompt unten in deine KI ein. Klicke dann auf den Button, und jede spätere Änderung bekommt einen kurzen Prompt nur dafür.",
+  "console.aiPrompts.changes.markFull": "Vollständiger Prompt erledigt",
+  "console.aiPrompts.changes.body": "Deine Einstellungen haben sich seit deinem letzten Prompt geändert. Dieser Prompt passt nur das an, ohne deinen Login neu zu bauen.",
+  "console.aiPrompts.changes.markDone": "Änderung erledigt",
+  "console.aiPrompts.changes.none": "Keine Änderungen seit deinem letzten Prompt."
 }

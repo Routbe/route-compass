@@ -57,6 +57,11 @@ export interface EnclaveOps {
   "pairwise.claim": { req: { root: Uint8Array; sector: string; nonce: string }; res: SubjectClaim };
 
   "hash.sha256Hex": { req: { text: string }; res: string };
+  /**
+   * Blind Hash Matching: hash the member's identities with the partner's
+   * domain separation and return only the indexes that match a partner hash.
+   */
+  "bhm.match": { req: { clientId: string; hashes: string[]; identities: { kind: string; value: string }[] }; res: number[] };
 
   /** Protocol identity (did:key, Ed25519). Created on first use, stored sealed under the device key. */
   "protocol.identity": { req: { userId: string }; res: { did: string } };

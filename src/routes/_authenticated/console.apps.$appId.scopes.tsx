@@ -14,6 +14,12 @@ const SCOPES = [
   { id: "profile", label: "profile", text: "Naam, @handle en profielfoto.", locked: false },
   { id: "email", label: "email", text: "E-mailadres en of het bevestigd is.", locked: false },
   {
+    id: "accounts:merge",
+    label: "accounts:merge",
+    text: "Bestaande accounts herkennen zonder lijst: jij stuurt hashes, de browser van het lid vergelijkt, en alleen het account dat het lid bevestigt komt één keer in de id_token. Zie Schema-templates.",
+    locked: false,
+  },
+  {
     id: "assets:write",
     label: "assets:write (agent)",
     text: "AI-agent maakt QR-codes en korte links voor het lid, binnen diens abonnement (anders HTTP 402). Token max. 1 uur geldig.",

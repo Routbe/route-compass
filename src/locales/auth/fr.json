@@ -312,5 +312,10 @@
   "auth.mf.setupDone": "La vérification en deux étapes est activée.",
   "auth.mf.setupSendSms": "Envoyer le code au {{to}}",
   "auth.mf.setupFailed": "La configuration a échoué. Réessayez.",
-  "auth.mf.signOut": "Se déconnecter"
+  "auth.mf.signOut": "Se déconnecter",
+  "auth.scope.accountsMerge": "Vérifier si vous avez déjà un compte chez {{app}}. Seul un compte que vous confirmez est partagé, une seule fois.",
+  "auth.consent.bhm.title": "Nous avons trouvé votre ancien compte chez {{app}}",
+  "auth.consent.bhm.body": "Votre navigateur a fait la comparaison lui-même ; {{app}} ne voit pas vos autres comptes. Choisissez comment continuer.",
+  "auth.consent.bhm.provider": "Votre compte {{provider}}",
+  "auth.consent.bhm.none": "Ne pas fusionner, créer un nouveau compte"
 }

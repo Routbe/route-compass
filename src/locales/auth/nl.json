@@ -312,5 +312,10 @@
   "auth.mf.setupDone": "Tweestapsverificatie staat aan.",
   "auth.mf.setupSendSms": "Stuur code naar {{to}}",
   "auth.mf.setupFailed": "Instellen is mislukt. Probeer opnieuw.",
-  "auth.mf.signOut": "Afmelden"
+  "auth.mf.signOut": "Afmelden",
+  "auth.scope.accountsMerge": "Controleren of je al een account hebt bij {{app}}. Alleen een account dat jij bevestigt, wordt één keer gedeeld.",
+  "auth.consent.bhm.title": "We vonden je oude account bij {{app}}",
+  "auth.consent.bhm.body": "Je browser vergeleek dit zelf; {{app}} ziet je andere accounts niet. Kies waarmee je verder wilt gaan.",
+  "auth.consent.bhm.provider": "Je {{provider}}-account",
+  "auth.consent.bhm.none": "Niet samenvoegen, start als nieuw account"
 }

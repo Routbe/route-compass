@@ -477,10 +477,28 @@ export const describeAuthorizeRequest = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Blind Hash Matching: the member's own identities, sent only to the member's
+ * browser so the enclave worker can compare them with the partner's hashes
+ * locally. Requires the member session; the app never calls this.
+ */
+export const getMyMatchIdentities = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    const { matchableIdentitiesOf } = await import("./provider.server");
+    return { identities: await matchableIdentitiesOf(context.userId) };
+  });
+
+const hex64 = z.string().regex(/^[0-9a-f]{64}$/);
+
 export const decideAuthorizeRequest = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((data: unknown) =>
-    authorizeSchema.extend({ allow: z.boolean(), richIdentityOptIn: z.boolean().optional(), emailChoice: z.string().max(64).optional(), declinedScopes: z.array(z.string().max(64)).max(20).optional() }).parse(data),
+    authorizeSchema.extend({ allow: z.boolean(), richIdentityOptIn: z.boolean().optional(), emailChoice: z.string().max(64).optional(), declinedScopes: z.array(z.string().max(64)).max(20).optional(),
+      // Blind Hash Matching: hashes travel in the URL fragment and this body only; never stored or logged.
+      blindHashes: z.array(hex64).max(20).optional(),
+      matchedIdentity: z.object({ kind: z.string().max(20), value: z.string().min(1).max(320) }).optional(),
+    }).parse(data),
   )
   .handler(async ({ data, context }): Promise<{ redirectTo: string } | { error: string }> => {
     {
@@ -537,7 +555,23 @@ export const decideAuthorizeRequest = createServerFn({ method: "POST" })
         if (data.emailChoice !== "primary") return { error: "Je e-mailkeuze kon niet worden opgeslagen. Probeer het opnieuw." };
       }
     }
+    // Blind Hash Matching: disclose one identity only when the member owns it,
+    // the app asked for accounts:merge and the app's own hash list contains it.
+    let disclosure: import("./blind-hash").BhmIdentity | null = null;
+    if (data.matchedIdentity && scopes.includes("accounts:merge")) {
+      const { bhmPreimage, isBhmKind, normalizeIdentityValue } = await import("./blind-hash");
+      const kind = data.matchedIdentity.kind;
+      if (!isBhmKind(kind)) return { error: "Onbekend accounttype." };
+      const value = normalizeIdentityValue(kind, data.matchedIdentity.value);
+      const { matchableIdentitiesOf } = await import("./provider.server");
+      const owned = (await matchableIdentitiesOf(context.userId)).some((i) => i.kind === kind && i.value === value);
+      const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(bhmPreimage(client.clientId, { kind, value }))));
+      const hex = Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
+      if (!owned || !(data.blindHashes ?? []).includes(hex)) return { error: "Dit account kon niet worden bevestigd." };
+      disclosure = { kind, value };
+    }
     const code = await issueAuthorizationCode({
+      disclosure,
       acr: stepUp ? STRICT_ACR : null,
       richIdentity: shareRichIdentity(client.richIdentityEnabled, Boolean(data.richIdentityOptIn)),
       clientId: client.clientId,

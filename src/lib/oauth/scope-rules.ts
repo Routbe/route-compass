@@ -5,7 +5,7 @@ export const IDENTITY_SCOPES = ["sybil:verify", "profile:read", "identity:legal_
 export type IdentityScope = (typeof IDENTITY_SCOPES)[number];
 
 /** Scopes the member can switch off on the consent screen (openid never). */
-export const OPTIONAL_SCOPES: readonly string[] = ["sybil:verify", "profile:read", "identity:legal_name", "identity:national_id", ...AGENT_SCOPES];
+export const OPTIONAL_SCOPES: readonly string[] = ["accounts:merge", "sybil:verify", "profile:read", "identity:legal_name", "identity:national_id", ...AGENT_SCOPES];
 
 /** Scopes whose disclosure is written to identity_disclosure_logs. */
 export const SENSITIVE_SCOPES: readonly string[] = ["sybil:verify", "identity:legal_name", "identity:national_id"];
@@ -65,6 +65,8 @@ export const SUPPORTED_SCOPES = [
   "email",
   "linked_accounts",
   "offline_access",
+  // Blind Hash Matching: one confirmed identity, id_token only (blind-hash.ts).
+  "accounts:merge",
   "sybil:verify",
   "profile:read",
   "identity:legal_name",

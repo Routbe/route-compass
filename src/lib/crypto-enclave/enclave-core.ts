@@ -13,6 +13,7 @@ import { masterKeyFromMnemonic, newMasterKey } from "@/lib/e2ee/recovery";
 import { loadDeviceKey, saveDeviceKey, workspaceKeyFromMaster, type WorkspaceKey } from "@/lib/e2ee/device-key";
 import { decryptLedgerEvent, generateLedgerKeys, unlockLedgerKey } from "@/lib/ledger/crypto";
 import { wipe, wipeMessage } from "@/lib/crypto/wipe";
+import { BHM_MAX_HASHES, bhmPreimage, isBhmKind } from "@/lib/oauth/blind-hash";
 import { checkShard, createVault, openShardWithPrf, openVault, sealShardWithPrf } from "@/lib/recovery/vault";
 import { claimSubject } from "@/lib/recovery/pairwise";
 import {
@@ -470,6 +471,27 @@ export const handlers: Handlers = {
   async "protocol.verifyChain"({ events }) {
     if (!Array.isArray(events)) fail("invalid_input");
     return verifyChain(events);
+  },
+
+  async "bhm.match"({ clientId, hashes, identities }) {
+    if (!Array.isArray(hashes) || !Array.isArray(identities) || identities.length > 50) fail("invalid_input");
+    const wanted = new Set(hashes.slice(0, BHM_MAX_HASHES).filter((h) => typeof h === "string" && /^[0-9a-f]{64}$/.test(h)));
+    const cid = str(clientId, 200);
+    const hits: number[] = [];
+    for (let i = 0; i < identities.length; i++) {
+      const id = identities[i];
+      if (!id || !isBhmKind(id.kind) || typeof id.value !== "string") continue;
+      const input = enc.encode(bhmPreimage(cid, { kind: id.kind, value: id.value }));
+      try {
+        const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", input));
+        const hex = Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
+        wipe(digest);
+        if (wanted.has(hex)) hits.push(i);
+      } finally {
+        wipe(input);
+      }
+    }
+    return hits;
   },
 
   async "hash.sha256Hex"({ text }) {

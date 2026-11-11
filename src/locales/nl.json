@@ -437,11 +437,11 @@
   "community.metrics.verified": "Geverifieerde profielen",
   "community.reviews.title": "Wat leden zeggen",
   "console.aiPrompts.assistant": "Assistent",
-  "console.aiPrompts.auth": "1. Inloggen & Universal Handle Sync",
+  "console.aiPrompts.auth": "2. Alleen Universal Handle Sync",
   "console.aiPrompts.badgePreview": "Voorbeeld: het badge-adres is nog niet live. De prompt bouwt het achter een feature flag.",
-  "console.aiPrompts.badges": "2. Badge Issuance API",
+  "console.aiPrompts.badges": "3. Badge Issuance API (nog niet live)",
   "console.aiPrompts.desc": "Plak deze in Lovable, Cursor of v0. Je appnaam en client_id staan er al in — je geheim nooit.",
-  "console.aiPrompts.full": "3. Volledige integratie",
+  "console.aiPrompts.full": "1. Volledige integratie (nieuwe app)",
   "console.aiPrompts.stack": "Stack",
   "console.aiPrompts.syncOff": "Universal Handle Sync staat uit: zet het aan onder Scopes zodat rout_handle wordt meegestuurd.",
   "console.aiPrompts.title": "AI-integratieprompts",
@@ -1874,5 +1874,11 @@
   "card.front.aliasNote": "Let op: wie je ROUT-kaart scant, ziet dan dat dit alias-profiel bij jou hoort.",
   "card.front.back": "De kleine QR op de achterkant is altijd je beveiligde betaalcode en linkt nooit naar een profiel.",
   "card.front.failed": "Opslaan lukt nu niet.",
-  "vault.unverified": "Alleen geverifieerde leden krijgen wallet-kaarten. Verifieer eerst je profiel."
+  "vault.unverified": "Alleen geverifieerde leden krijgen wallet-kaarten. Verifieer eerst je profiel.",
+  "console.aiPrompts.changes.title": "Prompt voor je laatste wijzigingen",
+  "console.aiPrompts.changes.first": "Nieuwe app? Plak eerst de volledige prompt hieronder in je AI. Klik daarna op de knop, dan krijg je bij elke latere wijziging een korte prompt voor alleen die wijziging.",
+  "console.aiPrompts.changes.markFull": "Volledige prompt is verwerkt",
+  "console.aiPrompts.changes.body": "Je instellingen veranderden sinds je laatste prompt. Deze prompt past alleen dat aan, zonder je login opnieuw te bouwen.",
+  "console.aiPrompts.changes.markDone": "Wijziging is verwerkt",
+  "console.aiPrompts.changes.none": "Geen wijzigingen sinds je laatste prompt."
 }

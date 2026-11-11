@@ -312,5 +312,10 @@
   "auth.mf.setupDone": "Zwei-Schritt-Bestätigung ist an.",
   "auth.mf.setupSendSms": "Code an {{to}} senden",
   "auth.mf.setupFailed": "Einrichtung fehlgeschlagen. Bitte erneut versuchen.",
-  "auth.mf.signOut": "Abmelden"
+  "auth.mf.signOut": "Abmelden",
+  "auth.scope.accountsMerge": "Prüfen, ob du bei {{app}} schon ein Konto hast. Nur ein Konto, das du bestätigst, wird einmal geteilt.",
+  "auth.consent.bhm.title": "Wir haben dein bestehendes Konto bei {{app}} gefunden",
+  "auth.consent.bhm.body": "Dein Browser hat selbst verglichen; {{app}} sieht deine anderen Konten nicht. Wähle, wie du weitermachst.",
+  "auth.consent.bhm.provider": "Dein {{provider}}-Konto",
+  "auth.consent.bhm.none": "Nicht zusammenführen, als neues Konto starten"
 }
