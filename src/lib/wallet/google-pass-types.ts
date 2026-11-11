@@ -36,5 +36,11 @@ export type GoogleLoyaltyObject = {
   linksModuleData?: { uris: { uri: string; localizedDescription: LocalizedString; id: string }[] };
   /** Smart Tap payload sent over NFC (Sovereign Key only); never shown on screen. */
   smartTapRedemptionValue?: string;
+  /** Sovereign Key only: QR that Google Wallet regenerates itself from a TOTP secret. */
+  rotatingBarcode?: {
+    type: "QR_CODE";
+    valuePattern: string;
+    totpDetails: { periodMillis: string; algorithm: "TOTP_SHA1"; parameters: { key: string; valueLength: number }[] };
+  };
 };
 export type GoogleCardClaims = { iss: string; aud: "google"; typ: "savetowallet"; origins: string[]; payload: { loyaltyClasses: GoogleLoyaltyClass[]; loyaltyObjects: GoogleLoyaltyObject[] } };

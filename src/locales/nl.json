@@ -1861,9 +1861,18 @@
   "vault.stealth.body": "Een aparte kaart voor je privé-alias. Niet te koppelen aan je hoofdprofiel.",
   "vault.stealth.none": "Je hebt nog geen privé-alias. Maak er eerst een aan.",
   "vault.key.title": "3 · Sovereign Key",
-  "vault.key.tag": "Hardwaresleutel · NFC · geen QR",
-  "vault.key.body": "Een versleutelde sleutel voor toegang en betalen met NFC. Geen QR-code en geen profielgegevens op het scherm.",
+  "vault.key.tag": "Betalen · NFC · QR die elke minuut wisselt",
+  "vault.key.body": "Je beveiligde ROUT-kaart om mee te betalen en toegang te krijgen. Google Wallet: NFC plus een QR die elke minuut vernieuwt en maar één keer werkt. Apple Wallet: alleen NFC. Geen profielgegevens.",
   "vault.key.warning": "Behandel dit als een fysieke sleutel. Deel hem nooit.",
   "vault.key.pending": "Nog niet beschikbaar: wacht op NFC-goedkeuring van Google (Smart Tap) en Apple.",
-  "vault.offline": "Deze wallet is nog niet ingesteld."
+  "vault.offline": "Deze wallet is nog niet ingesteld.",
+  "card.front.title": "Grote QR op de voorkant",
+  "card.front.lead": "Kies naar welke profielkaart de grote QR op de voorkant van je ROUT-kaart linkt.",
+  "card.front.root": "Openbaar profiel",
+  "card.front.alias": "Alias-profiel",
+  "card.front.noAlias": "Je hebt nog geen alias-profiel; maak er eerst een aan om dit te kiezen.",
+  "card.front.aliasNote": "Let op: wie je ROUT-kaart scant, ziet dan dat dit alias-profiel bij jou hoort.",
+  "card.front.back": "De kleine QR op de achterkant is altijd je beveiligde betaalcode en linkt nooit naar een profiel.",
+  "card.front.failed": "Opslaan lukt nu niet.",
+  "vault.unverified": "Alleen geverifieerde leden krijgen wallet-kaarten. Verifieer eerst je profiel."
 }

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { downloadVCard } from "@/lib/vcard";
-import { createWalletPass, getCardLiveness, getSecureCardToken, getWalletCard, getWalletStatus, saveMyCardDesign, setMyCardFrozen, verifyCardLiveCode } from "@/lib/wallet/wallet.functions";
+import { createWalletPass, getCardLiveness, getMyCardFront, getSecureCardToken, getWalletCard, getWalletStatus, saveMyCardDesign, setMyCardFront, setMyCardFrozen, verifyCardLiveCode } from "@/lib/wallet/wallet.functions";
 import { pickCardView } from "@/lib/wallet/card-liveness";
 import { contrastRatio } from "@/lib/wallet/card-style";
 import { CARD_MATERIALS, defaultMaterial, materialsFor, nearestSafeAccent, type AgeTier, type CardMaterial } from "@/lib/wallet/card-cmf";
@@ -88,6 +88,10 @@ export function RoutCardDialog({ open, onOpenChange, handle, space, inline = fal
   const [code, setCode] = useState<string | null>(null);
   const [secureUrl, setSecureUrl] = useState<string | null>(null);
   const [frontCode, setFrontCode] = useState<string | null>(null);
+  // Owner's choice for the big front QR: public profile card or alias profile card.
+  const [front, setFront] = useState<{ target: "root" | "alias"; alias: string | null } | null>(null);
+  const loadFront = useServerFn(getMyCardFront);
+  const saveFront = useServerFn(setMyCardFront);
   // The card is revealed in one go: only after its faces, 3D text and first codes are in.
   const [liveSettled, setLiveSettled] = useState(false);
   const [secureSettled, setSecureSettled] = useState(false);
@@ -138,7 +142,10 @@ export function RoutCardDialog({ open, onOpenChange, handle, space, inline = fal
     if (!card || webgl === null) return;
     let alive = true;
     // WebGL draws names as SDF text; the CSS fallback keeps them printed.
-    const frontQr = frontCode && card.space !== "alias" ? frontCardUrl(new URL(card.url).origin, card.handle, frontCode) : null;
+    const origin = new URL(card.url).origin;
+    const frontQr = card.space !== "alias" && front?.target === "alias" && front.alias
+      ? `${origin}/u/${encodeURIComponent(front.alias)}`
+      : frontCode && card.space !== "alias" ? frontCardUrl(origin, card.handle, frontCode) : null;
     void Promise.all([drawCardFaces(card, { sdfText: webgl, secureQr: secureUrl, frontQr, tier: faceTier }), drawCardFaces(card, { secureQr: secureUrl, frontQr, tier: faceTier })]).then(([gl, flat]) => {
       if (!alive) return;
       setFaces(gl);
@@ -149,7 +156,7 @@ export function RoutCardDialog({ open, onOpenChange, handle, space, inline = fal
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card, webgl, secureUrl, frontCode, styledCard?.hexBackgroundColor, styledCard?.hexForegroundColor, styledCard?.displayName, styledCard && "regionDisplay" in styledCard ? styledCard.regionDisplay : "", finish === "junior"]);
+  }, [card, webgl, secureUrl, frontCode, front?.target, front?.alias, styledCard?.hexBackgroundColor, styledCard?.hexForegroundColor, styledCard?.displayName, styledCard && "regionDisplay" in styledCard ? styledCard.regionDisplay : "", finish === "junior"]);
 
   // A minor whose saved/default material is outside their tier gets the first allowed one.
   useEffect(() => {
@@ -253,6 +260,23 @@ export function RoutCardDialog({ open, onOpenChange, handle, space, inline = fal
       clearTimeout(timer);
     };
   }, [open, card, handle, space, loadLive, liveNonce]);
+
+  useEffect(() => {
+    if (!open || !ownerState.owner || card?.space === "alias" || front) return;
+    loadFront().then(setFront).catch(() => setFront({ target: "root", alias: null }));
+  }, [open, ownerState.owner, card?.space, front, loadFront]);
+
+  const pickFront = async (target: "root" | "alias") => {
+    if (!front || front.target === target || (target === "alias" && !front.alias)) return;
+    const prev = front;
+    setFront({ ...front, target });
+    try {
+      await saveFront({ data: { target } });
+    } catch {
+      setFront(prev);
+      toast.error(t("card.front.failed"));
+    }
+  };
 
   // Never leave the stage empty: reveal after 8 s whatever is ready.
   useEffect(() => {
@@ -612,6 +636,30 @@ export function RoutCardDialog({ open, onOpenChange, handle, space, inline = fal
 
         {ownerState.owner ? (
           <div className="grid gap-3">
+            {card?.space !== "alias" && front && (
+              <fieldset className="grid gap-2 rounded-xl border border-border p-3">
+                <legend className="px-1 text-sm font-semibold">{t("card.front.title")}</legend>
+                <p className="text-xs text-muted-foreground">{t("card.front.lead")}</p>
+                <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1" role="radiogroup" aria-label={t("card.front.title")}>
+                  {(["root", "alias"] as const).map((target) => (
+                    <button
+                      key={target}
+                      type="button"
+                      role="radio"
+                      aria-checked={front.target === target}
+                      disabled={target === "alias" && !front.alias}
+                      onClick={() => void pickFront(target)}
+                      className={cn("min-h-10 rounded-md px-2 text-sm font-medium transition disabled:opacity-50", front.target === target ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+                    >
+                      {target === "root" ? t("card.front.root") : t("card.front.alias")}
+                    </button>
+                  ))}
+                </div>
+                {!front.alias && <p className="text-[11px] text-muted-foreground">{t("card.front.noAlias")}</p>}
+                {front.target === "alias" && <p className="text-[11px] text-muted-foreground">{t("card.front.aliasNote")}</p>}
+                <p className="text-[11px] text-muted-foreground">{t("card.front.back")}</p>
+              </fieldset>
+            )}
             <WalletVault only={vault === "key" ? ["key"] : undefined} />
             <Button type="button" variant="outline" className="h-11 gap-2 rounded-full" disabled={!card || busy !== null} onClick={() => void saveVcf()}>
               <UserPlus className="h-4 w-4" aria-hidden /> {t("card.vcf")}

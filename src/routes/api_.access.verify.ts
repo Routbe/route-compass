@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 /**
- * Blind verifier for the payment/access QR on the back of the ROUT Card.
- * Accepts only `rout:access:<token>`; any web or profile URL gets 403.
+ * Blind verifier for the payment/access QR on the back of the ROUT Card and the
+ * Google Wallet payment pass. Accepts only `rout:access:<token>` and the rotating
+ * `rout:wk:<key id>:<digits>`; any web or profile URL gets 403.
  * Returns validity only, never names, e-mail or profile data.
  */
 const Body = z.object({ payload: z.string().min(1).max(700) });
@@ -18,6 +19,19 @@ export const Route = createFileRoute("/api_/access/verify")({
         if (!limit.ok) return json({ valid: false, error: "limited" }, 429);
         const parsed = Body.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ valid: false, error: "bad_request" }, 400);
+        if (parsed.data.payload.startsWith("rout:wk:")) {
+          const { verifyWalletKeyQr, walletKeyQrNonce } = await import("@/lib/wallet/wallet-key.server");
+          const { KEY_TOTP_PERIOD_MS } = await import("@/lib/wallet/wallet-key");
+          const now = Date.now();
+          const k = await verifyWalletKeyQr(parsed.data.payload, process.env["WALLET_ID_SECRET"], now);
+          if (!k.ok) return json({ valid: false, error: "invalid" }, 403);
+          const { useTokenNonce } = await import("@/lib/wallet/card-freeze.server");
+          // A code stays acceptable until the end of the next step; keep its marker that long (max 60 s ahead).
+          const exp = Math.min(now + 60_000, (k.step + 2) * KEY_TOTP_PERIOD_MS);
+          const first = await useTokenNonce(await walletKeyQrNonce(k.keyId, k.step), exp).catch(() => null);
+          if (first !== true) return json({ valid: false, error: first === false ? "replayed" : "invalid" }, 403);
+          return json({ valid: true, replay_protected: true });
+        }
         const { parseAccessPayload } = await import("@/lib/wallet/card-token");
         const p = parseAccessPayload(parsed.data.payload);
         if (!p.ok) return json({ valid: false, error: p.reason }, 403);

@@ -1861,9 +1861,18 @@
   "vault.stealth.body": "A separate card for your private alias. Cannot be linked to your main profile.",
   "vault.stealth.none": "You don't have a private alias yet. Create one first.",
   "vault.key.title": "3 · Sovereign Key",
-  "vault.key.tag": "Hardware key · NFC · no QR",
-  "vault.key.body": "An encrypted key for NFC access and payments. No QR code and no profile data on screen.",
+  "vault.key.tag": "Payments · NFC · QR that changes every minute",
+  "vault.key.body": "Your secure ROUT card for payments and access. Google Wallet: NFC plus a QR that renews every minute and works only once. Apple Wallet: NFC only. No profile data.",
   "vault.key.warning": "Treat this as a physical key. Never share it.",
   "vault.key.pending": "Not available yet: waiting for NFC approval from Google (Smart Tap) and Apple.",
-  "vault.offline": "This wallet is not set up yet."
+  "vault.offline": "This wallet is not set up yet.",
+  "card.front.title": "Large QR on the front",
+  "card.front.lead": "Choose which profile card the large QR on the front of your ROUT card links to.",
+  "card.front.root": "Public profile",
+  "card.front.alias": "Alias profile",
+  "card.front.noAlias": "You don't have an alias profile yet; create one first to choose it.",
+  "card.front.aliasNote": "Note: anyone who scans your ROUT card will then see that this alias profile belongs to you.",
+  "card.front.back": "The small QR on the back is always your secure payment code and never links to a profile.",
+  "card.front.failed": "Saving isn't possible right now.",
+  "vault.unverified": "Only verified members get wallet cards. Verify your profile first."
 }

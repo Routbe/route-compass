@@ -3,8 +3,10 @@
  *
  *  PUBLIC_PROFILE  root ROUT Card: QR to the public profile hub, no NFC.
  *  STEALTH         alias ROUT Card: QR to the private alias (/u/<handle>), no NFC.
- *  SMART_TAP_KEY   Sovereign Key: no QR and no public profile data at all; an NFC
- *                  token for Google Smart Tap / Apple VAS readers only.
+ *  SMART_TAP_KEY   Sovereign Key: no static QR and no public profile data at all; an NFC
+ *                  token for Google Smart Tap / Apple VAS readers, plus (Google only) a
+ *                  QR that Google Wallet itself rotates every 60 s (TOTP). Apple cannot
+ *                  rotate a barcode, so the Apple key stays NFC-only.
  *
  * The key pass never carries a handle, name, profile URL or card number, so a
  * photographed or shoulder-surfed key reveals nothing about the profile, and a
@@ -21,12 +23,21 @@ export function passTypeSpace(type: WalletPassType): "root" | "alias" | null {
   return type === "PUBLIC_PROFILE" ? "root" : type === "STEALTH" ? "alias" : null;
 }
 
-/** Only the key pass may transmit over NFC; only profile passes may show a QR. */
-export const PASS_TYPE_RULES: Record<WalletPassType, { qr: boolean; nfc: boolean }> = {
-  PUBLIC_PROFILE: { qr: true, nfc: false },
-  STEALTH: { qr: true, nfc: false },
-  SMART_TAP_KEY: { qr: false, nfc: true },
+/**
+ * Only the key pass may transmit over NFC; only profile passes may show a fixed QR.
+ * The key's only QR is the Google-rotated TOTP code (never on Apple, never fixed).
+ */
+export const PASS_TYPE_RULES: Record<WalletPassType, { qr: boolean; nfc: boolean; rotatingQr: boolean }> = {
+  PUBLIC_PROFILE: { qr: true, nfc: false, rotatingQr: false },
+  STEALTH: { qr: true, nfc: false, rotatingQr: false },
+  SMART_TAP_KEY: { qr: false, nfc: true, rotatingQr: true },
 };
+
+/** Rotation period and length of the Google key's TOTP code. */
+export const KEY_TOTP_PERIOD_MS = 60_000;
+export const KEY_TOTP_DIGITS = 8;
+/** QR text of the rotating key code: `rout:wk:<key id>:<8 digits>`; never a web URL. */
+export const keyQrPattern = (keyId: string) => `rout:wk:${keyId}:{totp_value_0}`;
 
 type Env = Record<string, string | undefined>;
 
@@ -50,6 +61,8 @@ export type WalletKeyPayload = {
   token: string;
   /** Last four characters of the key id, for the member to recognise their key. */
   label: string;
+  /** Google rotating QR: key id plus the Base16 TOTP secret Google Wallet rotates with. */
+  totp?: { keyId: string; secretHex: string };
 };
 
 export const KEY_TILE = "#0a0a0a";
@@ -75,7 +88,7 @@ export function googleKeyClass(issuerId: string, smartTap: { redemptionIssuerId:
   };
 }
 
-/** Key object: no barcode, no handle, no profile link; the token travels only over NFC. */
+/** Key object: no fixed barcode, no handle, no profile link; NFC token plus a Google-rotated TOTP QR. */
 export function googleKeyObject(key: WalletKeyPayload, issuerId: string): GoogleLoyaltyObject {
   return {
     id: `${issuerId}.${key.serial}`,
@@ -84,12 +97,17 @@ export function googleKeyObject(key: WalletKeyPayload, issuerId: string): Google
     accountName: "NFC · Hardware key",
     accountId: `•••• ${key.label}`,
     smartTapRedemptionValue: key.token,
+    ...(key.totp ? { rotatingBarcode: {
+      type: "QR_CODE" as const,
+      valuePattern: keyQrPattern(key.totp.keyId),
+      totpDetails: { periodMillis: String(KEY_TOTP_PERIOD_MS), algorithm: "TOTP_SHA1" as const, parameters: [{ key: key.totp.secretHex, valueLength: KEY_TOTP_DIGITS }] },
+    } } : {}),
     textModulesData: [
-      { id: "key", localizedHeader: text("Hardwaresleutel", "Hardware key", "Clé matérielle", "Hardware-Schlüssel"), localizedBody: text(
-        "Deze pas toont geen QR-code en geen profielgegevens. Hij werkt alleen door je telefoon tegen een goedgekeurde ROUT-lezer te houden.",
-        "This pass shows no QR code and no profile data. It only works by holding your phone to an approved ROUT reader.",
-        "Ce pass n’affiche ni QR code ni données de profil. Il ne fonctionne qu’en approchant votre téléphone d’un lecteur ROUT agréé.",
-        "Dieser Pass zeigt keinen QR-Code und keine Profildaten. Er funktioniert nur, wenn du dein Telefon an ein zugelassenes ROUT-Lesegerät hältst.",
+      { id: "key", localizedHeader: text("Betaalsleutel", "Payment key", "Clé de paiement", "Bezahlschlüssel"), localizedBody: text(
+        "Betaal met NFC of laat de QR scannen. De QR vernieuwt elke minuut en werkt maar één keer; er staan geen profielgegevens op.",
+        "Pay with NFC or let the QR be scanned. The QR renews every minute and works only once; it holds no profile data.",
+        "Payez par NFC ou faites scanner le QR. Le QR se renouvelle chaque minute et ne fonctionne qu’une fois ; il ne contient aucune donnée de profil.",
+        "Bezahle per NFC oder lass den QR scannen. Der QR erneuert sich jede Minute und funktioniert nur einmal; er enthält keine Profildaten.",
       ) },
       { id: "separate", localizedHeader: text("Gescheiden van je profiel", "Separate from your profile", "Séparé de votre profil", "Getrennt von deinem Profil"), localizedBody: text(
         "Je openbare ROUT Card en deze sleutel zijn bewust twee passen. Wie je profielkaart ziet of scant, krijgt nooit je sleutel.",
